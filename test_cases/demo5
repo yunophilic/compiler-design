@@ -1,0 +1,12 @@
+int Q_rsqrt_modified( int number )
+{
+	int x2 = 32;
+	int y = 21;
+	int threehalfs = 0x42f3;
+
+	x2 = number / 2;
+	y  = number;
+
+	i  = 0x5f3759df - ( i / 2 );
+	y  = y * ( threehalfs - ( x2 * y * y ) ); 
+}

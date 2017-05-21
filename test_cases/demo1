@@ -1,0 +1,4 @@
+int c = 0;
+int b = 'b';
+int d = c * 32;
+printf("Hello World");

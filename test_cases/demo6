@@ -1,0 +1,22 @@
+int main()
+{
+	printf("Hello World");
+
+	int x = 2;
+	int y = 3;
+	int c = 0xffff;
+	int d = 'd';
+	int array[50];
+
+	boolean input_more = true;
+	
+	if (x != y && iput_more)
+	{
+		int r = 'r';
+		int g = 'g';
+		int b = 'b'; 
+		process(r, g, b);
+	}
+
+	return 0;
+}

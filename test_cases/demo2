@@ -1,0 +1,21 @@
+class Program {
+int x, y;
+
+ void  init (int x0, int y0)
+{
+	x = x0;
+	y = y0;
+}
+
+ void  plot ()
+{
+
+	to_screen(x,y);
+
+}
+
+}
+
+
+
+

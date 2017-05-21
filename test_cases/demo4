@@ -1,0 +1,64 @@
+class Program 
+{
+	int x[10], y[10];
+	int top = 0;
+	boolean empty = true;
+
+	void input_point()
+	{
+		int x0, y0;
+
+		x0 = user_input();
+		y0 = user_input();
+
+		x[top] = x0;
+		y[top] = y0;
+
+		top = top+1;
+	}
+
+	void rectangle()
+	{
+		int count;
+
+		for count = 1, 4
+		{
+			input_point();
+			if (count < 0)
+			{
+				continue;
+			}
+		}	 
+
+		empty = false;
+	}	
+
+	void input_polygon()
+	{
+		callout ( display, " Max points = 10 ");
+		
+		boolean input_more = true;
+
+		for count = 1, 10
+		{
+			input_point();
+			
+			if ( count >= 10)
+			{
+				break;
+			}
+			else
+			{	
+				callout( display, " Enter more points (0/1)");
+				input_more = get_boolean_input();
+
+				if (input_more == false)
+				{
+					break;
+				}
+			}
+		}
+
+	}
+
+}

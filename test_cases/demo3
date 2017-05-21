@@ -1,0 +1,11 @@
+class Program
+{
+	int a,b;
+
+	void sum()
+	{
+		a = 10;
+		b = 20;
+		callout(display, a+b);
+	}
+}
