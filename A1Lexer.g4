@@ -24,6 +24,10 @@ fragment AlphaNum
 : Alpha | Digit
 ;
 
+fragment Char
+: (.)
+;
+
 //===Tokens===
 
 WhiteSpace
@@ -42,6 +46,22 @@ CParen
 : ')'
 ;
 
+OSquareBracket
+: '['
+;
+
+CSquareBracket
+: ']'
+;
+
+OBraces
+: '{'
+;
+
+CBraces
+: '}'
+;
+
 SemiColon
 : ';'
 ;
@@ -56,6 +76,10 @@ Break
 
 Continue
 : 'continue'
+;
+
+AssignOp
+: ['=' '+=' '-=']
 ;
 
 ArithOp
@@ -83,10 +107,21 @@ HexLiteral
 ;
 
 IntLiteral
-: DecimalLiteral | HexLiteral
+: (DecimalLiteral | HexLiteral)
 ;
 
 BoolLiteral
-: ('true'|'false')
+: ('true' | 'false')
 ;
 
+CharLiteral
+: Char
+;
+
+StringLiteral
+: Char*
+;
+
+Id
+: (Alpha)(AlphaNum*)
+;
