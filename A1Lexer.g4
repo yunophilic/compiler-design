@@ -24,6 +24,14 @@ fragment AlphaNum
 : Alpha | Digit
 ;
 
+fragment SingleQuote
+: '\''
+;
+
+fragment DoubleQuote
+: '\"'
+;
+
 fragment Char
 : (.)
 ;
@@ -34,15 +42,59 @@ WhiteSpace
 : Delim+ -> skip
 ;
 
+//===Keywords===
+
+If
+: 'if'
+;
+
+Else
+: 'else'
+;
+
+For
+: 'for'
+;
+
+While
+: 'while'
+;
+
+Break
+: 'break'
+;
+
+Continue
+: 'continue'
+;
+
+Return
+: 'return'
+;
+
+Class
+: 'class'
+;
+
+Program
+: 'Program'
+;
+
 Callout
 : 'callout'
 ;
 
-OParen
+Type
+: ('void' | 'int' | 'boolean')
+;
+
+//===Symbols===
+
+OParenthesis
 : '('
 ;
 
-CParen
+CParenthesis
 : ')'
 ;
 
@@ -66,61 +118,63 @@ SemiColon
 : ';'
 ;
 
-Type
-: ('int' | 'boolean')
+Comma
+: ','
 ;
 
-Break
-: 'break'
-;
-
-Continue
-: 'continue'
-;
-
-AssignOp
-: ['=' '+=' '-=']
-;
-
-ArithOp
-: ['+' '-' '*' '/' '%']
-;
+//===Operators===
 
 RelOp
-: ['<' '>' '<=' '>=']
+: '<' | '>' | '<=' | '>='
 ;
 
 EqOp
-: ('==' | '!=')
+: '==' | '!='
 ;
 
 CondOp
-: ('&&' | '||')
+: '&&' | '||'
 ;
+
+NegOp
+: '!'
+;
+
+AssignOp
+: '=' | '+=' | '-='
+;
+
+ArithOp
+: '+' | '-' | '*' | '/' | '%'
+;
+
+//===Literals===
 
 DecimalLiteral
 : Digit+
 ;
 
 HexLiteral
-: '0x'HexDigit+
+: '0x' HexDigit+
 ;
 
-IntLiteral
-: (DecimalLiteral | HexLiteral)
-;
+/*IntLiteral
+: DecimalLiteral | HexLiteral
+;*/
 
 BoolLiteral
 : ('true' | 'false')
 ;
 
 CharLiteral
-: Char
+: (SingleQuote)(Char)(SingleQuote)
 ;
 
 StringLiteral
-: Char*
+: (DoubleQuote)(Char*?)(DoubleQuote)
 ;
+
+//==========
 
 Id
 : (Alpha)(AlphaNum*)

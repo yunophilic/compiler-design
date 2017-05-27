@@ -1,1 +1,9 @@
->break continue
+class Program
+{
+	int x = 0xABF;
+
+	void start()
+	{
+		boolean b = (x >= 3);
+	}
+}
