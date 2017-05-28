@@ -56,9 +56,9 @@ For
 : 'for'
 ;
 
-While
+/*While
 : 'while'
-;
+;*/
 
 Break
 : 'break'
@@ -85,7 +85,11 @@ Callout
 ;
 
 Type
-: ('void' | 'int' | 'boolean')
+: 'int' | 'boolean'
+;
+
+Void
+: 'void'
 ;
 
 //===Symbols===

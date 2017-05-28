@@ -25,4 +25,4 @@ $(CLASSES):
 	$(JC) $(JFAGS) $(SRCS) -d $(OUTPUT)
 
 clean:
-	-rm -r *.class *.java *.tokens
+	rm -f -r *.class *.java *.tokens

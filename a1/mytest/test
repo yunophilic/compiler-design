@@ -1,9 +1,16 @@
 class Program
 {
-	int x = 0xABF;
+	int x = 0xABF9;
 
 	void start()
 	{
 		boolean b = (x >= 3);
+		x += 27 - 3-1000 +20;
+		if(true){int y;y=0;y+=12309;}
+		else
+		{boolean b = (x >= 3);
+x += 27 - 3-1000 +20;if(true){int y;y=0;y+=12309;}
+		}
+
 	}
 }
