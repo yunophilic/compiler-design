@@ -225,6 +225,44 @@ method_decl returns [int id]
 }
 ;
 
+// <method_call> -> <method_name> '(' (<expr> ( , <expr> )*)? ')'
+/*method_call returns [int id]
+: Ident '(' method_call_args ')'
+{
+	$id = PrintNode("Call_expr");
+	PrintEdges($id, $method_call_args.s);
+}
+;*/
+
+// <method_call> -> callout ( <string_literal> ( , <callout_arg> )* )
+//|
+
+/*method_call_args returns [MySet s]
+: m=method_call_args ',' method_call_arg
+{
+	$s = $m.s;
+	$s.ExtendArray($method_call_arg.id));
+}
+| method_call_arg
+{
+	$s = new MySet();
+	$s.ExtendArray($method_call_arg.id);
+}
+|
+{
+	$s = new MySet();
+}
+;
+
+method_call_arg returns [int id]
+: expr
+{
+	$id = PrintNode("Expr_arg");
+	PrintEdge($id, expr);
+}
+;*/
+
+
 params returns [int id]
 : Type Ident nextParams
 {
@@ -329,6 +367,23 @@ statement returns [int id]
 	PrintEdge($id, PrintNode($eqOp.text));
 	PrintEdge($id, $expr.id);
 }
+
+//<statement> -> if '(' <expr> ')' <block> ( else <block> )?
+| If '(' expr ')' block
+{
+	$id = PrintNode("If");
+	PrintEdge($id, $expr.id);
+	PrintEdge($id, $block.id);
+}
+| If '(' expr ')' b1=block Else b2=block 
+{
+	$id = PrintNode("If_Else");
+	PrintEdge($id, $expr.id);
+	PrintEdge($id, $b1.id);
+	PrintEdge($id, $b2.id);
+}
+
+//<statement> -> <block>
 | block
 {
 	$id = $block.id;
