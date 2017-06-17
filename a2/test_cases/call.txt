@@ -1,0 +1,14 @@
+class Program {
+
+int x,y,z;
+
+void init ( )
+{
+	x = 10;
+	y = 10;
+	z = dos(x , y);
+
+}
+
+
+}

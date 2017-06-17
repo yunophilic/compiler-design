@@ -1,0 +1,10 @@
+class Program{
+int a,b;
+void call ( )
+{
+	b = 0;
+	a = a / b;
+	a = a + 1;
+}
+
+}
