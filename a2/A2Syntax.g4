@@ -172,9 +172,23 @@ field_decl returns [int id]
 	PrintEdge($id, PrintNode($Type.text));
 	PrintEdge($id, PrintNode($Ident.text));
 }
+| f=field_decl ',' Ident '[' num ']'
+{
+	$id = $f.id;
+
+	PrintEdge($id, PrintNode($Ident.text));
+	PrintEdge($id, PrintNode($num.text));
+}
+| Type Ident '[' num ']'
+{
+	$id = PrintNode("Field_decl");
+
+	PrintEdge($id, PrintNode($Type.text));
+	PrintEdge($id, PrintNode($Ident.text));
+	PrintEdge($id, PrintNode($num.text));
+}
 ;
 
-// <field_decl> -> <type> <id> = <literal> ;
 inited_field_decl returns [int id]
 : Type Ident '=' literal 
 {
