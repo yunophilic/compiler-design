@@ -226,22 +226,30 @@ method_decl returns [int id]
 ;
 
 // <method_call> -> <method_name> '(' (<expr> ( , <expr> )*)? ')'
-/*method_call returns [int id]
+method_call returns [int id]
 : Ident '(' method_call_args ')'
 {
 	$id = PrintNode("Call_expr");
+	PrintEdge($id, PrintNode($Ident.text));
 	PrintEdges($id, $method_call_args.s);
 }
-;*/
 
 // <method_call> -> callout ( <string_literal> ( , <callout_arg> )* )
-//|
+/*| Callout '(' Str ')'
+{
+	$id = PrintNode("Call_expr");
+	int id = PrintNode("Call");
+	PrintEdge($id, id);
+	PrintEdge(id, )
+	PrintEdges($id, $method_call_args.s);
+}*/
+;
 
-/*method_call_args returns [MySet s]
+method_call_args returns [MySet s]
 : m=method_call_args ',' method_call_arg
 {
 	$s = $m.s;
-	$s.ExtendArray($method_call_arg.id));
+	$s.ExtendArray($method_call_arg.id);
 }
 | method_call_arg
 {
@@ -258,10 +266,9 @@ method_call_arg returns [int id]
 : expr
 {
 	$id = PrintNode("Expr_arg");
-	PrintEdge($id, expr);
+	PrintEdge($id, $expr.id);
 }
-;*/
-
+;
 
 params returns [int id]
 : Type Ident nextParams
@@ -383,15 +390,33 @@ statement returns [int id]
 	PrintEdge($id, $b2.id);
 }
 
+//<statement> -> for <id> = <expr> , <expr> <block>
+| For Ident eqOp e1=expr ',' e2=expr block
+{
+	$id = PrintNode("For");
+	PrintEdge($id, PrintNode($Ident.text));
+	PrintEdge($id, PrintNode($e1.id));
+	PrintEdge($id, PrintNode($e2.id));
+	PrintEdge($id, PrintNode($block.id));
+}
+
+//<statement> -> return ( <expr> )? ;
+| Ret (expr)? ';'
+{
+	$id = PrintNode("Ret");
+	if ($expr != null)
+	{
+		PrintEdge($id, $expr.id);
+	}
+}
+
 //<statement> -> <block>
 | block
 {
 	$id = $block.id;
-};
+}
+;
 
-
-//<expr> -> <expr> <bin_op> <expr>
-//<expr> -> <location>
 //<expr> -> <literal>
 expr returns [int id]
 : literal
@@ -399,6 +424,14 @@ expr returns [int id]
 	$id = PrintNode("Const_expr");
 	PrintEdge($id, PrintNode($literal.text));
 }
+
+//<expr> -> <method_call>
+| method_call
+{
+	$id  = $method_call.id;
+}
+
+//<expr> -> <expr> <bin_op> <expr>
 | e1=expr binOp e2=expr
 {
 	$id = PrintNode("Bin_expr");
@@ -406,12 +439,14 @@ expr returns [int id]
 	PrintEdge($id, PrintNode($binOp.text));
 	PrintEdge($id, $e2.id);
 }
+
+//<expr> -> <location>
 | location
 {
 	$id = PrintNode("Loc_expr");
 	PrintEdge($id, $location.id);
-};
-
+}
+;
 
 location returns [int id]
 :Ident
