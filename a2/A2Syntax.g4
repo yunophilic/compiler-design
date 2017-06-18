@@ -395,19 +395,31 @@ statement returns [int id]
 {
 	$id = PrintNode("For");
 	PrintEdge($id, PrintNode($Ident.text));
-	PrintEdge($id, PrintNode($e1.id));
-	PrintEdge($id, PrintNode($e2.id));
-	PrintEdge($id, PrintNode($block.id));
+	PrintEdge($id, $e1.id);
+	PrintEdge($id, $e2.id);
+	PrintEdge($id, $block.id);
 }
 
 //<statement> -> return ( <expr> )? ;
 | Ret (expr)? ';'
 {
 	$id = PrintNode("Ret");
-	if ($expr != null)
+	if ($expr.text != null)
 	{
 		PrintEdge($id, $expr.id);
 	}
+}
+
+//<statement> -> break ;
+| Brk ';'
+{
+	$id = PrintNode("Break");
+}
+
+//<statement> -> continue ;
+| Cnt ';'
+{
+	$id = PrintNode("Cont");
 }
 
 //<statement> -> <block>
