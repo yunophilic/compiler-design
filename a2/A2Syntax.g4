@@ -310,7 +310,7 @@ callout_arg returns [int id]
 }
 ;
 
-//===method arguments===
+//===method arg types===
 
 expr_arg returns [int id]
 : expr
