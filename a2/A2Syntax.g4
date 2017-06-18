@@ -174,6 +174,7 @@ field_decl returns [int id]
 }
 ;
 
+// <field_decl> -> <type> <id> = <literal> ;
 inited_field_decl returns [int id]
 : Type Ident '=' literal 
 {
@@ -235,26 +236,33 @@ method_call returns [int id]
 }
 
 // <method_call> -> callout ( <string_literal> ( , <callout_arg> )* )
-/*| Callout '(' Str ')'
+| callout
 {
 	$id = PrintNode("Call_expr");
-	int id = PrintNode("Call");
-	PrintEdge($id, id);
-	PrintEdge(id, )
-	PrintEdges($id, $method_call_args.s);
-}*/
+	PrintEdge($id, $callout.id);
+}
 ;
 
+callout returns [int id]
+: Callout '(' callout_args ')'
+{
+	$id = PrintNode("Call");
+	PrintEdges($id, $callout_args.s);
+}
+;
+
+//===method call arguments===
+
 method_call_args returns [MySet s]
-: m=method_call_args ',' method_call_arg
+: m=method_call_args ',' expr_arg
 {
 	$s = $m.s;
-	$s.ExtendArray($method_call_arg.id);
+	$s.ExtendArray($expr_arg.id);
 }
-| method_call_arg
+| expr_arg
 {
 	$s = new MySet();
-	$s.ExtendArray($method_call_arg.id);
+	$s.ExtendArray($expr_arg.id);
 }
 |
 {
@@ -262,13 +270,51 @@ method_call_args returns [MySet s]
 }
 ;
 
-method_call_arg returns [int id]
+//===callout arguments===
+
+callout_args returns [MySet s]
+: c=callout_args ',' callout_arg
+{
+	$s = $c.s;
+	$s.ExtendArray($callout_arg.id);
+}
+| str_arg
+{
+	$s = new MySet();
+	$s.ExtendArray($str_arg.id);
+}
+;
+
+callout_arg returns [int id]
+: str_arg 
+{
+	$id = $str_arg.id;
+}
+| expr_arg
+{
+	$id = $expr_arg.id;
+}
+;
+
+//===method arguments===
+
+expr_arg returns [int id]
 : expr
 {
 	$id = PrintNode("Expr_arg");
 	PrintEdge($id, $expr.id);
 }
 ;
+
+str_arg returns [int id]
+: Str 
+{
+	$id = PrintNode("String_arg");
+	PrintEdge($id, PrintNode(ProcessString($Str.text)));
+}
+;
+
+//=======================
 
 params returns [int id]
 : Type Ident nextParams
@@ -365,7 +411,7 @@ statements returns [int id]
 ;
 
 
-// <statement> -> <location> <assign_op> <expr> ;
+// <statement> -> <location> <assign_op> <expr> ';'
 statement returns [int id]
 : location eqOp expr ';'
 {
@@ -375,7 +421,13 @@ statement returns [int id]
 	PrintEdge($id, $expr.id);
 }
 
-//<statement> -> if '(' <expr> ')' <block> ( else <block> )?
+// <statement> -> <method_call> ';'
+| method_call ';'
+{
+	$id = $method_call.id;
+}
+
+// <statement> -> if '(' <expr> ')' <block> ( else <block> )?
 | If '(' expr ')' block
 {
 	$id = PrintNode("If");
@@ -390,7 +442,7 @@ statement returns [int id]
 	PrintEdge($id, $b2.id);
 }
 
-//<statement> -> for <id> = <expr> , <expr> <block>
+// <statement> -> for <id> = <expr> , <expr> <block>
 | For Ident eqOp e1=expr ',' e2=expr block
 {
 	$id = PrintNode("For");
@@ -400,7 +452,7 @@ statement returns [int id]
 	PrintEdge($id, $block.id);
 }
 
-//<statement> -> return ( <expr> )? ;
+// <statement> -> return ( <expr> )? ';'
 | Ret (expr)? ';'
 {
 	$id = PrintNode("Ret");
@@ -410,40 +462,47 @@ statement returns [int id]
 	}
 }
 
-//<statement> -> break ;
+// <statement> -> break ';'
 | Brk ';'
 {
 	$id = PrintNode("Break");
 }
 
-//<statement> -> continue ;
+// <statement> -> continue ';'
 | Cnt ';'
 {
 	$id = PrintNode("Cont");
 }
 
-//<statement> -> <block>
+// <statement> -> <block>
 | block
 {
 	$id = $block.id;
 }
 ;
 
-//<expr> -> <literal>
+// <expr> -> <location>
 expr returns [int id]
-: literal
+: location
 {
-	$id = PrintNode("Const_expr");
-	PrintEdge($id, PrintNode($literal.text));
+	$id = PrintNode("Loc_expr");
+	PrintEdge($id, $location.id);
 }
 
-//<expr> -> <method_call>
+// <expr> -> <method_call>
 | method_call
 {
 	$id  = $method_call.id;
 }
 
-//<expr> -> <expr> <bin_op> <expr>
+// <expr> -> <literal>
+| literal
+{
+	$id = PrintNode("Const_expr");
+	PrintEdge($id, PrintNode($literal.text));
+}
+
+// <expr> -> <expr> <bin_op> <expr>
 | e1=expr binOp e2=expr
 {
 	$id = PrintNode("Bin_expr");
@@ -452,19 +511,41 @@ expr returns [int id]
 	PrintEdge($id, $e2.id);
 }
 
-//<expr> -> <location>
-| location
+// <expr> -> - <expr>
+| '-' e=expr
 {
-	$id = PrintNode("Loc_expr");
-	PrintEdge($id, $location.id);
+	$id = PrintNode("Neg_expr");
+	PrintEdge($id, $e.id);
+}
+
+// <expr> -> ! <expr>
+| '!' e=expr
+{
+	$id = PrintNode("Not_expr");
+	PrintEdge($id, $e.id);
+}
+
+// <expr> -> ( <expr> )
+| '(' e=expr ')'
+{
+	$id = $e.id;
 }
 ;
 
+// <location> -> <id>
 location returns [int id]
-:Ident
+: Ident
 {
 	$id = PrintNode("Loc");
 	PrintEdge($id, PrintNode($Ident.text));
+}
+
+// <location> -> <id> [ <expr> ]
+| Ident '[' expr ']'
+{
+	$id = PrintNode("Array_loc");
+	PrintEdge($id, PrintNode($Ident.text));
+	PrintEdge($id, $expr.id);
 }
 ;
 

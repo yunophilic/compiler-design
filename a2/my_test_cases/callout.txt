@@ -1,0 +1,9 @@
+class Program {
+	void init()
+	{
+		callout("123");
+		callout("123", x, "test");
+	}
+
+
+}

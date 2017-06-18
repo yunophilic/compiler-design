@@ -1,0 +1,14 @@
+class Program {
+
+int dos ( )
+{
+	int a,b,c;
+	boolean d;
+	a = 0;
+	b = a - 34;
+	c = b - a;
+
+	d = true;
+	return;
+}
+}
