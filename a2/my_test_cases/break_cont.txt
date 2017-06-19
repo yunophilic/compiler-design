@@ -1,0 +1,30 @@
+class Program {
+	int i;
+	int a, b;
+
+	void do()
+	{
+		f();
+		for i = 0, b
+		{
+			a = a + f();
+			if (i < a)
+			{
+				break;
+			}
+			else 
+			{
+				continue;
+			}
+		} 
+		return;
+	}
+
+	int f()
+	{
+		b = 99;
+		break;
+		continue;
+		return b-7;
+	}
+}
