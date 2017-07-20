@@ -1,0 +1,16 @@
+L_0: c = 0
+L_1: a = 1
+L_2: b = 10
+L_3: x = a
+L_4: t_0 = x < b
+L_5: if t_0 goto L_7
+L_6: ifFalse t_0 goto L_15
+L_7: t_1 = c + x
+L_8: c = t_1
+L_9: t_2 = c == 3
+L_10: if t_2 goto L_12
+L_11: ifFalse t_2 goto L_13
+L_12: goto L_13
+L_13: x = x + 1
+L_14: goto L_4
+L_15: 

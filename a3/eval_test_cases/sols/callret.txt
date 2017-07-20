@@ -1,0 +1,17 @@
+fun:   
+L_1: t_0 = a + b
+L_2: t_1 = t_0 + c
+L_3: a = t_1 = 
+L_4: t_2 = 0 - c
+L_5: t_3 = b - t_2
+L_6: a = t_3 = 
+L_7: t_4 = b * c
+L_8: t_5 = a + t_4
+L_9: a = t_5 = 
+L_10:  = a ret 
+main:   
+L_12: "a = %d\n" param 
+L_13: t_6 = fun call 0
+L_14: t_6 param 
+L_15:  = "printf" call 2
+L_16:  = 0 ret 

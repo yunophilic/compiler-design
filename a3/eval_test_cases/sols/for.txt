@@ -1,0 +1,12 @@
+L_0: c = 0
+L_1: a = 1
+L_2: b = 10
+L_3: x = a
+L_4: t_0 = x < b
+L_5: if t_0 goto L_7
+L_6: ifFalse t_0 goto L_11
+L_7: t_1 = c + x
+L_8: c = t_1
+L_9: x = x + 1
+L_10: goto L_4
+L_11: 

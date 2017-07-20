@@ -1,0 +1,22 @@
+class Program {
+
+int a , b, c;
+
+int fun ( )
+{
+	a = a + b + c;
+	a = b - -c;
+	a = a + b * c;
+	
+	return (a);	
+
+}
+
+int main () {
+
+	callout("printf", "a = %d\n", fun());
+
+	return (0);
+
+}
+}

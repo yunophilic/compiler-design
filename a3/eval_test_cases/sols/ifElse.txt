@@ -1,0 +1,8 @@
+L_0: t_0 = a > 0
+L_1: if t_0 goto L_3
+L_2: ifFalse t_0 goto L_6
+L_3: t_1 = a / b
+L_4: c = t_1
+L_5: goto L_7
+L_6: c = 2
+L_7: 

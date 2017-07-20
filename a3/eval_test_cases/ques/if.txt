@@ -1,0 +1,14 @@
+class Program {
+
+int a , b, c;
+
+void dos ( )
+{
+        if ( a > 0 )
+	{
+		c = a / b;
+	}
+	
+
+}
+}

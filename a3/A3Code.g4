@@ -13,7 +13,7 @@ import java.io.*;
 @parser::members {
 
 public enum DataType {
-	INT, BOOLEAN, INVALID
+	INT, BOOLEAN, VOID, INVALID
 }
 
 
@@ -131,8 +131,16 @@ public class Quad {
 	}
 
 	void Print () {
-		System.out.println("L_" + label + ": " + s.GetName(dst) + " = " 
+		if (s.GetName(src2).equals("") && op.equals("=")) {
+			System.out.println("L_" + label + ": " + s.GetName(dst) + " " 
+				+ op + " " + s.GetName(src1));
+		} else if(s.GetName(src2).equals("")) {
+			System.out.println("L_" + label + ": " + s.GetName(dst) + " = " 
+				+ op + " " + s.GetName(src1));
+		} else {
+			System.out.println("L_" + label + ": " + s.GetName(dst) + " = " 
 				+ s.GetName(src1) + " " + op + " " + s.GetName(src2));
+		}
 	}
 
 }
@@ -208,13 +216,37 @@ field_decl returns [DataType t]
 
 
 method_decl 
-: Type Ident '('  ')' block
+: Type Ident '(' params ')' block
 {
 	s.insert($Ident.text, DataType.valueOf($Type.text.toUpperCase()));
 }
+| Void Ident '(' params ')' block
+{
+	s.insert($Ident.text, DataType.valueOf($Void.text.toUpperCase()));	
+}
 ;
 
+params /*returns [int id]*/
+: Type Ident nextParams
+{
 
+}
+|
+{
+
+}
+;
+
+nextParams /*returns /*[MySet s]*/
+: n=nextParams ',' Type Ident
+{
+
+}
+|
+{
+
+}
+;
 
 block 
 : '{' var_decls statements '}'
@@ -249,10 +281,57 @@ statements
 
 
 statement 
-: location '=' expr ';'
+: location eqOp expr ';'
 {
-	q.Add($location.id, $expr.id, -1, "=");
+	switch ($eqOp.text)
+	{
+		case "=":
+			q.Add($location.id, $expr.id, -1, "=");
+			break;
+		case "+=":
+			break;
+		case "-=":
+			break;
+		default:
+			break;
+	}
 }
+| If '(' expr ')' block
+{
+
+}
+| If '(' expr ')' b1=block Else b2=block
+{
+	
+}
+| For Ident '=' e1=expr ',' e2=expr block
+{
+	
+}
+| Ret ';'
+{
+	
+}
+| Ret '(' expr ')' ';'
+{
+	
+}
+| Brk ';'
+{
+	
+}
+| Cnt ';'
+{
+	
+}
+| block
+{
+	
+}
+/*| methodCall ';'
+{
+	
+}*/
 ;
 
 
@@ -265,11 +344,54 @@ expr returns [int id]
 {
 	$id = $location.id;
 }
-| e1=expr '+' e2=expr
+| '(' e=expr ')'
+{
+	$id = $e.id;
+}
+| SubOp e=expr
+{
+	$id = s.Add(s.GetType($e.id));
+	q.Add($id, $e.id, -1, $SubOp.text);
+}
+| '!' e=expr
+{
+	$id = s.Add(s.GetType($e.id));
+	q.Add($id, $e.id, -1, "!");
+}
+| e1=expr MulDiv e2=expr
 {
 	$id = s.Add(s.GetType($e1.id));
-	q.Add($id, $e1.id, $e2.id, "+");
+	q.Add($id, $e1.id, $e2.id, $MulDiv.text);
 }
+| e1=expr AddOp e2=expr
+{
+	$id = s.Add(s.GetType($e1.id));
+	q.Add($id, $e1.id, $e2.id, $AddOp.text);
+}
+| e1=expr SubOp e2=expr
+{
+	$id = s.Add(s.GetType($e1.id));
+	q.Add($id, $e1.id, $e2.id, $SubOp.text);
+}
+| e1=expr RelOp e2=expr
+{
+	$id = s.Add(s.GetType($e1.id));
+	q.Add($id, $e1.id, $e2.id, $RelOp.text);
+}
+| e1=expr AndOp e2=expr
+{
+	$id = s.Add(s.GetType($e1.id));
+	q.Add($id, $e1.id, $e2.id, $AndOp.text);
+}
+| e1=expr OrOp e2=expr
+{
+	$id = s.Add(s.GetType($e1.id));
+	q.Add($id, $e1.id, $e2.id, $OrOp.text);
+}
+/*| methodCall
+{
+
+}*/
 ;
 
 
@@ -291,7 +413,15 @@ literal returns [int id]
 {
 	$id = s.insert($num.text, DataType.INT);
 }
+| Char
+| BoolLit
 ;
+
+eqOp
+: '='
+| AssignOp
+;
+
 //--------------------------------------------- END OF SESSION 2 -----------------------------------
 
 
@@ -398,7 +528,10 @@ HexNum
 
 
 
-
+BoolLit
+: 'true'
+| 'false'
+;
 
 Type
 : 'int'
@@ -409,8 +542,39 @@ Ident
 : Alpha AlphaNum* 
 ;
 
+RelOp
+: '<='
+| '>=' 
+| '<'
+| '>'
+| '=='
+| '!='
+;
 
+AssignOp
+: '+='
+| '-='
+;
 
+MulDiv
+: '*'
+| '/'
+| '%'
+;
 
+AddOp
+: '+'
+;
 
+SubOp
+: '-'
+;
+
+AndOp
+: '&&'
+;
+
+OrOp
+: '||'
+;
 

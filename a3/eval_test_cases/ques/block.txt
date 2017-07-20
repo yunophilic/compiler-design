@@ -1,0 +1,18 @@
+class Program {
+
+int a , b, c;
+
+void fun ( )
+{
+        int d;
+	{
+		c = a / b;
+		{
+			d = b;
+		}
+		b = 1;
+	}
+	
+
+}
+}

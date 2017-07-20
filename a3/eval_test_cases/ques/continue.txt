@@ -1,0 +1,21 @@
+class Program {
+
+int a , b, c, x;
+
+void main ( )
+{
+	c=0;
+	a=1;
+	b=10;
+        for x = a, b
+	{
+		c = c + x;
+		if (c == 3)
+		{
+			continue;
+		}
+	}
+	
+
+}
+}

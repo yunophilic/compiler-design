@@ -1,0 +1,13 @@
+class Program {
+
+int a , b, c;
+
+void fun ( )
+{
+	a = a + b + c;
+	a = b - -c;
+	a = a + b * c;
+	
+
+}
+}
