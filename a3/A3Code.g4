@@ -34,26 +34,8 @@ public class IdUtil {
 	}	
 }
 
-public class ScopeUtil {
-	int scope = 0;
-
-	void Enter() {
-		scope++;
-	}
-
-	void Exit() {
-		scope--;
-	}
-
-	int GetCurrent() {
-		return scope;
-	}
-
-}
-
 TempUtil tempUtil = new TempUtil();
 IdUtil idUtil = new IdUtil();
-ScopeUtil scopeUtil = new ScopeUtil();
 
 public class Symbol {
 	int id;
@@ -172,20 +154,15 @@ public class SymTab {
 			s.Print();
 		}
 	}
-
-	void InsertMultiple(List<Symbol> symbols) {
-		for(Symbol s : symbols) {
-			this.insert(s.GetName(), s.GetType());
-		}
-	}
-
 }
 
 public class SymTabStack {
 	ArrayDeque<SymTab> stack;
+	ArrayDeque<SymTab> popped;
 
 	SymTabStack() {
 		stack = new ArrayDeque<>();
+		popped = new ArrayDeque<>();
 		push(new SymTab()); //add global symTab
 	}
 
@@ -199,7 +176,9 @@ public class SymTabStack {
 	}
 
 	SymTab pop() {
-		return stack.removeLast();
+		SymTab st = stack.removeLast();;
+		popped.addLast(st);
+		return st;
 	}
 
 	SymTab getLast() {
@@ -213,21 +192,13 @@ public class SymTabStack {
 	int Find (String n) {
 		//search from top of stack (most inner scope)
 		ArrayDeque<SymTab> stackCopy = stack.clone();
-		ArrayList<SymTab> symTabList = new ArrayList<>();
-		while (!stackCopy.isEmpty()) {
-			symTabList.add(stackCopy.removeLast());
-		}
+		int id = -1;
+		while (
+			!stackCopy.isEmpty() && 
+			(id = stackCopy.removeLast().Find(n)) == -1
+		);
 
-		//System.out.println("list size: " + symTabList.size());
-
-		for(SymTab st : symTabList) {
-			int id = st.Find(n);
-			if (id != -1) {
-				return id;
-			}
-		}
-
-		return -1;
+		return id;
 	}
 
 	DataType GetType (int id) {
@@ -243,8 +214,13 @@ public class SymTabStack {
 	}
 
 	Symbol getSymById(int id) {
-		//System.out.println("get symbol by id in SymTabStack");
 		for (SymTab st : stack) {
+			Symbol s = st.getSymById(id);
+			if (s != null)
+				return s;
+		}
+
+		for (SymTab st : popped) {
 			Symbol s = st.getSymById(id);
 			if (s != null)
 				return s;
@@ -275,8 +251,6 @@ public class Quad {
 	int src1;
 	int src2;
 	int dst;
-	int scope;
-
 
 	Quad (int l, int d, int s1, int s2, String o) {
 		label = l;
@@ -284,11 +258,6 @@ public class Quad {
 		src1 = s1;
 		src2 = s2;
 		op = o;
-		scope = scopeUtil.GetCurrent();
-	}
-
-	int GetScope() {
-		return scope;
 	}
 
 	int GetSrc1() {
@@ -333,7 +302,7 @@ public class Quad {
 	}
 
 	void debug() {
-		System.out.println(label + "\t" + op + "\t" + src1 + "\t" + src2 + "\t" + dst + "\t" + scope);
+		System.out.println(label + "\t" + op + "\t" + src1 + "\t" + src2 + "\t" + dst);
 	}
 
 }
@@ -353,17 +322,8 @@ public class QuadTab {
 	}
 
 	void Print() {
-		int prevScope = 0;
 		for(Quad q : qt) {
-			int currentScope = q.GetScope();
-
-			if (prevScope > currentScope) {
-				SymTab poppedSt = symTabStack.pop();
-			}
-
 			q.Print();
-
-			prevScope = currentScope;
 		}
 	}
 
@@ -478,7 +438,6 @@ var_decls returns [SymTab st]
 {
 	$st = new SymTab();
 	symTabStack.push($st);
-	scopeUtil.Enter();
 }
 ;
 
@@ -504,7 +463,7 @@ statements
 : statement t=statements
 |
 {
-	scopeUtil.Exit();
+	symTabStack.pop();
 }
 ;
 
@@ -556,11 +515,11 @@ statement
 }
 | Ret ';'
 {
-	scopeUtil.Exit();
+	symTabStack.pop();
 }
 | Ret '(' expr ')' ';'
 {
-	scopeUtil.Exit();
+	symTabStack.pop();
 }
 | Brk ';'
 {
