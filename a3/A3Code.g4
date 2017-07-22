@@ -202,28 +202,34 @@ public class SymTabStack {
 	}
 
 	DataType GetType (int id) {
-		if (id == -1)
+		if (id == -1) {
 			return DataType.INVALID;
+		}
 		return (getSymById(id).GetType());
 	}
 
 	String GetName (int id) {
-		if (id == -1)
+		if (id == -1) {
 			return ("");
+		}
 		return (getSymById(id).GetName());
 	}
 
 	Symbol getSymById(int id) {
+		//search all (including the popped symtabs)
+
 		for (SymTab st : stack) {
 			Symbol s = st.getSymById(id);
-			if (s != null)
+			if (s != null) {
 				return s;
+			}
 		}
 
 		for (SymTab st : popped) {
 			Symbol s = st.getSymById(id);
-			if (s != null)
+			if (s != null){
 				return s;
+			}
 		}
 
 		return null;
@@ -562,7 +568,8 @@ expr returns [int id]
 {
 	SymTab st = symTabStack.getLast();
 	$id = st.Add(symTabStack.GetType($e.id));
-	q.Add($id, $e.id, -1, $SubOp.text);
+	int zeroId = st.insert("0", DataType.INT);
+	q.Add($id, zeroId, $e.id, $SubOp.text);
 }
 | '!' e=expr
 {
