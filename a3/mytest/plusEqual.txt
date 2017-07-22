@@ -1,0 +1,13 @@
+class Program {
+
+	int a[0xFF];
+	int b;
+
+	void init ( )
+	{
+		a[0xF]+=2;
+		b = a[0xA];
+
+		b+=1;
+	}
+}

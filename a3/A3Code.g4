@@ -59,11 +59,17 @@ public class Symbol {
 	int id;
 	String name;
 	DataType dt;
+	String arrSize; //decimal or hex string, null for non array types
 
 	Symbol (String n, DataType d) {
+		this(n, d, null);
+	}
+
+	Symbol (String n, DataType d, String s) {
 		id = idUtil.GetNext();
 		name = n;
 		dt = d;
+		arrSize = s;
 	}
 
 	Symbol (DataType d) {
@@ -87,7 +93,11 @@ public class Symbol {
 	}
 
 	void Print() {
-		System.out.println(id + "\t" + name + "\t" + dt);
+		String type = dt + "";
+		if (arrSize != null) {
+			type = "ARRAY(" + dt + "," + arrSize + ")";
+		}
+		System.out.println(name + "\t" + type);
 	}
 
 	
@@ -118,6 +128,15 @@ public class SymTab {
 		Symbol s = new Symbol(n, d);
 		st.add(s);
 		return (s.GetId());
+	}
+
+	int insert(String n, DataType d, String s) {
+		int id = Find(n);
+		if (id != -1) return id;
+		
+		Symbol sym = new Symbol(n, d, s);
+		st.add(sym);
+		return (sym.GetId());
 	}
 
 	int Add (DataType d) {
@@ -286,14 +305,30 @@ public class Quad {
 
 	void Print() {
 		if (symTabStack.GetName(src2).equals("") && op.equals("=")) { //assignment operation ('=')
+
 			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " " 
 				+ op + " " + symTabStack.GetName(src1));
+
 		} else if(symTabStack.GetName(src2).equals("")) { //unary operation ('-', '!')
+
 			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
 				+ op + " " + symTabStack.GetName(src1));
+
+		} else if(op.equals("[]r")) { //array access read
+
+			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
+				+ symTabStack.GetName(src1) + " [ " + symTabStack.GetName(src2) + " ] ");
+
+		} else if(op.equals("[]w")) { //array access write
+
+			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + 
+				" [ " + symTabStack.GetName(src1) + " ] = " + symTabStack.GetName(src2));
+
 		} else { //binary operation
+
 			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
 				+ symTabStack.GetName(src1) + " " + op + " " + symTabStack.GetName(src2));
+
 		}
 	}
 
@@ -376,6 +411,16 @@ field_decl returns [DataType t]
 {
 	$t = DataType.valueOf($Type.text.toUpperCase());
 	symTabStack.getFirst().insert($Ident.text, $t);
+}
+| f=field_decl ',' Ident '[' num ']'
+{
+	$t = $f.t;
+	symTabStack.getFirst().insert($Ident.text, $t, $num.text);
+}
+| Type Ident '[' num ']'
+{
+	$t = DataType.valueOf($Type.text.toUpperCase());
+	symTabStack.getFirst().insert($Ident.text, $t, $num.text);
 }
 ;
 
@@ -470,9 +515,26 @@ statement
 	switch ($eqOp.text)
 	{
 		case "=":
-			q.Add($location.id, $expr.id, -1, "=");
+			if ($location.isArrAccess){
+				q.Add($location.id, $location.offset, $expr.id, "[]w");
+			} else {
+				q.Add($location.id, $expr.id, -1, "=");
+			}
 			break;
 		case "+=":
+			if ($location.isArrAccess){
+				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
+				q.Add(tempId, $location.id, $location.offset, "[]r");
+
+				int secondTempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
+				q.Add(secondTempId, tempId, $expr.id, "=");
+
+				q.Add($location.id, $location.offset, tempId, "[]w");
+			} else {
+				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
+				q.Add(tempId, $location.id, $expr.id, "=");
+				q.Add($location.id, $expr.id, -1, "+=");
+			}
 			break;
 		case "-=":
 			break;
@@ -526,7 +588,12 @@ expr returns [int id]
 }
 | location
 {
-	$id = $location.id;
+	if ($location.isArrAccess) {
+		$id = symTabStack.getLast().Add(symTabStack.GetType($location.id));
+		q.Add($id, $location.id, $location.offset, "[]r");
+	} else {
+		$id = $location.id;
+	}
 }
 | '(' e=expr ')'
 {
@@ -587,10 +654,23 @@ expr returns [int id]
 ;
 
 
-location returns [int id]
+location returns [int id, int offset, boolean isArrAccess]
 :Ident
 {
 	$id = symTabStack.Find($Ident.text);
+	$isArrAccess = false;
+}
+| Ident '[' expr ']'
+{
+	$id = symTabStack.Find($Ident.text);
+	
+	SymTab st = symTabStack.getLast();
+
+	$offset = st.Add(DataType.INT);
+	int idOfFour = st.insert("4", DataType.INT);
+	q.Add($offset, idOfFour, $expr.id, "*");
+
+	$isArrAccess = true;
 }
 ;
 
