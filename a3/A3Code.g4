@@ -6,6 +6,7 @@ grammar A3Code;
 @header {
 
 import java.io.*;
+import java.util.*;
 }
 
 
@@ -17,22 +18,38 @@ public enum DataType {
 }
 
 
+public class TempUtil {
+	int incr = 0;
 
+	int GetNext() {
+		return (incr ++);
+	}
+}
 
+public class IdUtil {
+	int incr = 0;
+	
+	int GetNext() {
+		return (incr ++);
+	}	
+}
+
+TempUtil tempUtil = new TempUtil();
+IdUtil idUtil = new IdUtil();
 
 public class Symbol {
-	
+	int id;
 	String name;
 	DataType dt;
 
 	Symbol (String n, DataType d) {
+		id = idUtil.GetNext();
 		name = n;
 		dt = d;
 	}
 
-	Symbol (int id, DataType d) {
-		name = "t_" + id;
-		dt = d;
+	Symbol (DataType d) {
+		this("t_" + tempUtil.GetNext(), d);
 	}
 
 	boolean Equal (String n) {
@@ -47,6 +64,10 @@ public class Symbol {
 		return name;
 	}
 
+	int GetId() {
+		return id;
+	}
+
 	void Print() {
 		System.out.println(name + "\t" + dt);
 	}
@@ -56,20 +77,15 @@ public class Symbol {
 }
 
 public class SymTab {
-	
-	Symbol st[];
-	int size;
-	int temps;
+	List<Symbol> st;
 
-	SymTab () {
-		st = new Symbol[1000];
-		size = 0;
-		temps = 0;
+	SymTab() {
+		st = new ArrayList<>();
 	}
 
 	int Find (String n) {
-		for (int  i = 0; i < size; i ++) {
-			if (st[i].Equal(n)) return i;
+		for (int  i = 0; i < st.size(); i ++) {
+			if (st.get(i).Equal(n)) return i;
 		}
 		
 		return -1;
@@ -78,40 +94,127 @@ public class SymTab {
 	int insert(String n, DataType d) {
 		int id = Find(n);
 		if (id != -1) return id;
-	
-		st[size] = new Symbol(n, d);
-		return (size ++);
+		
+		Symbol s = new Symbol(n, d);
+		st.add(s);
+		return (s.GetId());
 	}
 
 	int Add (DataType d) {
-		st [size] = new Symbol (temps, d);
-		temps ++;
-		return (size ++);
+		Symbol s = new Symbol(d);
+		st.add(s);
+		return (s.GetId());
 	}
 
 	DataType GetType (int id) {
-		if (id == -1) return DataType.INVALID;
-		return (st[id].GetType());
+		if (id == -1)
+			return DataType.INVALID;
+		return (getSymById(id).GetType());
 	}
 
 	String GetName (int id) {
-		if (id == -1) return ("");
-		return (st[id].GetName()); 
+		if (id == -1)
+			return ("");
+		return (getSymById(id).GetName());
+	}
+
+	Symbol getSymById(int id) {
+		for (Symbol s : st) {
+			if (s.GetId() == id) {
+				return s;
+			}
+		}
+
+		return null;
 	}
 
 	void Print() {
-		for (int  i = 0; i < size; i ++) {
-			st[i].Print();
+		for (Symbol s : st) {
+			s.Print();
 		}
 	}
 
-	
+	void InsertMultiple(List<Symbol> symbols) {
+		for(Symbol s : symbols) {
+			this.insert(s.GetName(), s.GetType());
+		}
+	}
 
 }
 
-SymTab s = new SymTab();
+public class SymTabStack {
+	ArrayDeque<SymTab> stack;
 
+	SymTabStack() {
+		stack = new ArrayDeque<>();
+		stack.add(new SymTab()); //add global symTab
+	}
 
+	void push(SymTab st) {
+		stack.push(st);
+	}
+
+	int size() {
+		return stack.size();
+	}
+
+	SymTab pop() {
+		return stack.pop();
+	}
+
+	SymTab getLast() {
+		return stack.getLast();
+	}
+
+	SymTab getFirst() {
+		return stack.getFirst();
+	}
+
+	int Find (String n) {
+		//search from top of stack (most inner scope)
+		ArrayDeque<SymTab> stackCopy = stack.clone();
+
+		int id = -1;
+		while (
+			!stackCopy.isEmpty() && 
+			(id = stackCopy.pop().Find(n)) == -1
+		);
+
+		return id;
+	}
+
+	DataType GetType (int id) {
+		if (id == -1)
+			return DataType.INVALID;
+		return (getSymById(id).GetType());
+	}
+
+	String GetName (int id) {
+		if (id == -1)
+			return ("");
+		return (getSymById(id).GetName());
+	}
+
+	Symbol getSymById(int id) {
+		for (SymTab st : stack) {
+			Symbol s = st.getSymById(id);
+			if (s != null)
+				return s;
+		}
+
+		return null;
+	}
+
+	void Print() {
+		System.out.println("symtab");
+		for (SymTab st : stack) {
+			st.Print();
+		}
+	}
+}
+
+SymTabStack symTabStack = new SymTabStack();
+SymTab globalSt = new SymTab();
 
 public class Quad {
 
@@ -131,15 +234,15 @@ public class Quad {
 	}
 
 	void Print () {
-		if (s.GetName(src2).equals("") && op.equals("=")) {
-			System.out.println("L_" + label + ": " + s.GetName(dst) + " " 
-				+ op + " " + s.GetName(src1));
-		} else if(s.GetName(src2).equals("")) {
-			System.out.println("L_" + label + ": " + s.GetName(dst) + " = " 
-				+ op + " " + s.GetName(src1));
+		if (symTabStack.GetName(src2).equals("") && op.equals("=")) {
+			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " " 
+				+ op + " " + symTabStack.GetName(src1));
+		} else if(symTabStack.GetName(src2).equals("")) {
+			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
+				+ op + " " + symTabStack.GetName(src1));
 		} else {
-			System.out.println("L_" + label + ": " + s.GetName(dst) + " = " 
-				+ s.GetName(src1) + " " + op + " " + s.GetName(src2));
+			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
+				+ symTabStack.GetName(src1) + " " + op + " " + symTabStack.GetName(src2));
 		}
 	}
 
@@ -147,32 +250,28 @@ public class Quad {
 
 public class QuadTab {
 
-	Quad qt[];
+	List<Quad> qt;
 	int size;
 
 	QuadTab () {
-		qt = new Quad[1000];
+		qt = new ArrayList<>();
 		size = 0;
 	}
 
-	
-
 	int Add(int dst, int src1, int src2, String op) {
 			
-		qt[size] = new Quad(size, dst, src1, src2, op);
-		return (size ++);
+		qt.add(new Quad(size, dst, src1, src2, op));
+		return (qt.size()-1);
 	}
 
 	void Print() {
-		for (int  i = 0; i < size; i ++) {
-			qt[i].Print();
+		for(Quad q : qt) {
+			q.Print();
 		}
 	}
 
 
 }
-
-
 
 QuadTab q = new QuadTab();
 
@@ -186,7 +285,11 @@ QuadTab q = new QuadTab();
 prog
 : Class Program '{' field_decls method_decl '}'
 {
-	s.Print();
+	/*SymTab globalSt = new SymTab();
+	symTabStack.push(globalSt);*/
+
+	//Print
+	symTabStack.Print();
 	System.out.println("------------------------------------");
 	q.Print();
 }
@@ -202,13 +305,12 @@ field_decl returns [DataType t]
 : f=field_decl ',' Ident
 {
 	$t = $f.t;
-	s.insert($Ident.text, $t);
+	symTabStack.getFirst().insert($Ident.text, $t);
 }
 | Type Ident
 {
 	$t = DataType.valueOf($Type.text.toUpperCase());
-	s.insert($Ident.text, $t);					
-	
+	symTabStack.getFirst().insert($Ident.text, $t);
 }
 ;
 
@@ -218,11 +320,13 @@ field_decl returns [DataType t]
 method_decl 
 : Type Ident '(' params ')' block
 {
-	s.insert($Ident.text, DataType.valueOf($Type.text.toUpperCase()));
+	symTabStack.getFirst()
+		.insert($Ident.text, DataType.valueOf($Type.text.toUpperCase()));
 }
 | Void Ident '(' params ')' block
 {
-	s.insert($Ident.text, DataType.valueOf($Void.text.toUpperCase()));	
+	symTabStack.getFirst()
+		.insert($Ident.text, DataType.valueOf($Void.text.toUpperCase()));	
 }
 ;
 
@@ -250,25 +354,36 @@ nextParams /*returns /*[MySet s]*/
 
 block 
 : '{' var_decls statements '}'
+{
+	symTabStack.push($var_decls.st);
+}
 ;
 
-var_decls 
+var_decls returns [SymTab st]
 : v=var_decls var_decl ';'
+{
+	$st = $v.st;
+	$st.InsertMultiple($var_decl.symbols);
+}
 | 
+{
+	$st = new SymTab();
+}
 ;
 
 
-var_decl returns [DataType t]
+var_decl returns [List<Symbol> symbols, DataType t]
 : v=var_decl ',' Ident
 {
 	$t = $v.t;
-	s.insert($Ident.text, $t);
+	$symbols = $v.symbols;
+	$symbols.add(new Symbol($Ident.text, $t));
 }
 | Type Ident
 {
 	$t = DataType.valueOf($Type.text.toUpperCase());
-	s.insert($Ident.text, $t);					
-	
+	$symbols = new ArrayList();
+	$symbols.add(new Symbol($Ident.text, $t));
 }
 ;
 
@@ -277,12 +392,16 @@ var_decl returns [DataType t]
 statements 
 : statement t=statements
 |
+{
+	symTabStack.pop();
+}
 ;
 
 
 statement 
 : location eqOp expr ';'
 {
+//	System.out.println("HEY");
 	switch ($eqOp.text)
 	{
 		case "=":
@@ -310,11 +429,11 @@ statement
 }
 | Ret ';'
 {
-	
+	symTabStack.pop();
 }
 | Ret '(' expr ')' ';'
 {
-	
+	symTabStack.pop();
 }
 | Brk ';'
 {
@@ -350,41 +469,49 @@ expr returns [int id]
 }
 | SubOp e=expr
 {
+	SymTab s = symTabStack.getLast();
 	$id = s.Add(s.GetType($e.id));
 	q.Add($id, $e.id, -1, $SubOp.text);
 }
 | '!' e=expr
 {
+	SymTab s = symTabStack.getLast();
 	$id = s.Add(s.GetType($e.id));
 	q.Add($id, $e.id, -1, "!");
 }
 | e1=expr MulDiv e2=expr
 {
+	SymTab s = symTabStack.getLast();
 	$id = s.Add(s.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $MulDiv.text);
 }
 | e1=expr AddOp e2=expr
 {
+	SymTab s = symTabStack.getLast();
 	$id = s.Add(s.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $AddOp.text);
 }
 | e1=expr SubOp e2=expr
 {
+	SymTab s = symTabStack.getLast();
 	$id = s.Add(s.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $SubOp.text);
 }
 | e1=expr RelOp e2=expr
 {
+	SymTab s = symTabStack.getLast();
 	$id = s.Add(s.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $RelOp.text);
 }
 | e1=expr AndOp e2=expr
 {
+	SymTab s = symTabStack.getLast();
 	$id = s.Add(s.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $AndOp.text);
 }
 | e1=expr OrOp e2=expr
 {
+	SymTab s = symTabStack.getLast();
 	$id = s.Add(s.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $OrOp.text);
 }
@@ -398,7 +525,7 @@ expr returns [int id]
 location returns [int id]
 :Ident
 {
-	$id = s.Find($Ident.text);
+	$id = symTabStack.Find($Ident.text);
 }
 ;
 
@@ -411,7 +538,7 @@ num
 literal returns [int id]
 : num
 {
-	$id = s.insert($num.text, DataType.INT);
+	$id = symTabStack.getLast().insert($num.text, DataType.INT);
 }
 | Char
 | BoolLit
