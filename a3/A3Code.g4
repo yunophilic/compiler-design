@@ -34,8 +34,26 @@ public class IdUtil {
 	}	
 }
 
+public class ScopeUtil {
+	int scope = 0;
+
+	void Enter() {
+		scope++;
+	}
+
+	void Exit() {
+		scope--;
+	}
+
+	int GetCurrent() {
+		return scope;
+	}
+
+}
+
 TempUtil tempUtil = new TempUtil();
 IdUtil idUtil = new IdUtil();
+ScopeUtil scopeUtil = new ScopeUtil();
 
 public class Symbol {
 	int id;
@@ -69,7 +87,7 @@ public class Symbol {
 	}
 
 	void Print() {
-		System.out.println(name + "\t" + dt);
+		System.out.println(id + "\t" + name + "\t" + dt);
 	}
 
 	
@@ -85,7 +103,9 @@ public class SymTab {
 
 	int Find (String n) {
 		for (int  i = 0; i < st.size(); i ++) {
-			if (st.get(i).Equal(n)) return i;
+			Symbol s = st.get(i);
+			if (s.Equal(n))
+				return s.GetId();
 		}
 		
 		return -1;
@@ -147,11 +167,12 @@ public class SymTabStack {
 
 	SymTabStack() {
 		stack = new ArrayDeque<>();
-		stack.add(new SymTab()); //add global symTab
+		push(new SymTab()); //add global symTab
 	}
 
 	void push(SymTab st) {
-		stack.push(st);
+		st.Print();
+		stack.addLast(st);
 	}
 
 	int size() {
@@ -159,7 +180,7 @@ public class SymTabStack {
 	}
 
 	SymTab pop() {
-		return stack.pop();
+		return stack.removeLast();
 	}
 
 	SymTab getLast() {
@@ -173,14 +194,21 @@ public class SymTabStack {
 	int Find (String n) {
 		//search from top of stack (most inner scope)
 		ArrayDeque<SymTab> stackCopy = stack.clone();
+		ArrayList<SymTab> symTabList = new ArrayList<>();
+		while (!stackCopy.isEmpty()) {
+			symTabList.add(stackCopy.removeLast());
+		}
 
-		int id = -1;
-		while (
-			!stackCopy.isEmpty() && 
-			(id = stackCopy.pop().Find(n)) == -1
-		);
+		//System.out.println("list size: " + symTabList.size());
 
-		return id;
+		for(SymTab st : symTabList) {
+			int id = st.Find(n);
+			if (id != -1) {
+				return id;
+			}
+		}
+
+		return -1;
 	}
 
 	DataType GetType (int id) {
@@ -196,6 +224,7 @@ public class SymTabStack {
 	}
 
 	Symbol getSymById(int id) {
+		//System.out.println("get symbol by id in SymTabStack");
 		for (SymTab st : stack) {
 			Symbol s = st.getSymById(id);
 			if (s != null)
@@ -206,9 +235,13 @@ public class SymTabStack {
 	}
 
 	void Print() {
-		System.out.println("symtab");
-		for (SymTab st : stack) {
-			st.Print();
+		ArrayDeque<SymTab> stackClone = stack.clone();
+		int i=0;
+		while (!stackClone.isEmpty()) {
+			System.out.println("Symtab " + i);
+			stackClone.removeFirst().Print();
+			System.out.println();
+			i++;
 		}
 	}
 }
@@ -223,6 +256,7 @@ public class Quad {
 	int src1;
 	int src2;
 	int dst;
+	int scope;
 
 
 	Quad (int l, int d, int s1, int s2, String o) {
@@ -231,25 +265,45 @@ public class Quad {
 		src1 = s1;
 		src2 = s2;
 		op = o;
+		scope = scopeUtil.GetCurrent();
 	}
 
-	void Print () {
-		if (symTabStack.GetName(src2).equals("") && op.equals("=")) {
+	int GetScope() {
+		return scope;
+	}
+
+	int GetSrc1() {
+		return src1;
+	}
+
+	int GetSrc2() {
+		return src2;
+	}
+
+	int GetDst() {
+		return dst;
+	}
+
+	void Print() {
+		if (symTabStack.GetName(src2).equals("") && op.equals("=")) { //assignment operation ('=')
 			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " " 
 				+ op + " " + symTabStack.GetName(src1));
-		} else if(symTabStack.GetName(src2).equals("")) {
+		} else if(symTabStack.GetName(src2).equals("")) { //unary operation ('-', '!')
 			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
 				+ op + " " + symTabStack.GetName(src1));
-		} else {
+		} else { //binary operation
 			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
 				+ symTabStack.GetName(src1) + " " + op + " " + symTabStack.GetName(src2));
 		}
 	}
 
+	void debug() {
+		System.out.println(label + "\t" + op + "\t" + src1 + "\t" + src2 + "\t" + dst + "\t" + scope);
+	}
+
 }
 
 public class QuadTab {
-
 	List<Quad> qt;
 	int size;
 
@@ -259,18 +313,30 @@ public class QuadTab {
 	}
 
 	int Add(int dst, int src1, int src2, String op) {
-			
 		qt.add(new Quad(size, dst, src1, src2, op));
-		return (qt.size()-1);
+		return (size ++);
 	}
 
 	void Print() {
+		int prevScope = 0;
 		for(Quad q : qt) {
+			int currentScope = q.GetScope();
+
+			if (prevScope > currentScope) {
+				SymTab poppedSt = symTabStack.pop();
+			}
+
 			q.Print();
+
+			prevScope = currentScope;
 		}
 	}
 
-
+	void debug() {
+		for(Quad q : qt) {
+			q.debug();
+		}
+	}
 }
 
 QuadTab q = new QuadTab();
@@ -285,11 +351,10 @@ QuadTab q = new QuadTab();
 prog
 : Class Program '{' field_decls method_decl '}'
 {
-	/*SymTab globalSt = new SymTab();
-	symTabStack.push(globalSt);*/
-
 	//Print
 	symTabStack.Print();
+	System.out.println("------------------------------------");
+	q.debug();
 	System.out.println("------------------------------------");
 	q.Print();
 }
@@ -354,36 +419,37 @@ nextParams /*returns /*[MySet s]*/
 
 block 
 : '{' var_decls statements '}'
-{
-	symTabStack.push($var_decls.st);
-}
 ;
 
 var_decls returns [SymTab st]
 : v=var_decls var_decl ';'
 {
 	$st = $v.st;
-	$st.InsertMultiple($var_decl.symbols);
+	for (AbstractMap.SimpleEntry<String, DataType> p : $var_decl.symbols) {
+		$st.insert(p.getKey(), p.getValue());
+	}
 }
 | 
 {
 	$st = new SymTab();
+	symTabStack.push($st);
+	scopeUtil.Enter();
 }
 ;
 
 
-var_decl returns [List<Symbol> symbols, DataType t]
+var_decl returns [List<AbstractMap.SimpleEntry<String, DataType>> symbols, DataType t]
 : v=var_decl ',' Ident
 {
 	$t = $v.t;
 	$symbols = $v.symbols;
-	$symbols.add(new Symbol($Ident.text, $t));
+	$symbols.add(new AbstractMap.SimpleEntry<String, DataType>($Ident.text, $t));
 }
 | Type Ident
 {
 	$t = DataType.valueOf($Type.text.toUpperCase());
-	$symbols = new ArrayList();
-	$symbols.add(new Symbol($Ident.text, $t));
+	$symbols = new ArrayList<>();
+	$symbols.add(new AbstractMap.SimpleEntry<String, DataType>($Ident.text, $t));
 }
 ;
 
@@ -393,7 +459,7 @@ statements
 : statement t=statements
 |
 {
-	symTabStack.pop();
+	scopeUtil.Exit();
 }
 ;
 
@@ -401,7 +467,6 @@ statements
 statement 
 : location eqOp expr ';'
 {
-//	System.out.println("HEY");
 	switch ($eqOp.text)
 	{
 		case "=":
@@ -429,11 +494,11 @@ statement
 }
 | Ret ';'
 {
-	symTabStack.pop();
+	scopeUtil.Exit();
 }
 | Ret '(' expr ')' ';'
 {
-	symTabStack.pop();
+	scopeUtil.Exit();
 }
 | Brk ';'
 {
@@ -469,50 +534,50 @@ expr returns [int id]
 }
 | SubOp e=expr
 {
-	SymTab s = symTabStack.getLast();
-	$id = s.Add(s.GetType($e.id));
+	SymTab st = symTabStack.getLast();
+	$id = st.Add(symTabStack.GetType($e.id));
 	q.Add($id, $e.id, -1, $SubOp.text);
 }
 | '!' e=expr
 {
-	SymTab s = symTabStack.getLast();
-	$id = s.Add(s.GetType($e.id));
+	SymTab st = symTabStack.getLast();
+	$id = st.Add(symTabStack.GetType($e.id));
 	q.Add($id, $e.id, -1, "!");
 }
 | e1=expr MulDiv e2=expr
 {
-	SymTab s = symTabStack.getLast();
-	$id = s.Add(s.GetType($e1.id));
+	SymTab st = symTabStack.getLast();
+	$id = st.Add(symTabStack.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $MulDiv.text);
 }
 | e1=expr AddOp e2=expr
 {
-	SymTab s = symTabStack.getLast();
-	$id = s.Add(s.GetType($e1.id));
+	SymTab st = symTabStack.getLast();
+	$id = st.Add(symTabStack.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $AddOp.text);
 }
 | e1=expr SubOp e2=expr
 {
-	SymTab s = symTabStack.getLast();
-	$id = s.Add(s.GetType($e1.id));
+	SymTab st = symTabStack.getLast();
+	$id = st.Add(symTabStack.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $SubOp.text);
 }
 | e1=expr RelOp e2=expr
 {
-	SymTab s = symTabStack.getLast();
-	$id = s.Add(s.GetType($e1.id));
+	SymTab st = symTabStack.getLast();
+	$id = st.Add(symTabStack.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $RelOp.text);
 }
 | e1=expr AndOp e2=expr
 {
-	SymTab s = symTabStack.getLast();
-	$id = s.Add(s.GetType($e1.id));
+	SymTab st = symTabStack.getLast();
+	$id = st.Add(symTabStack.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $AndOp.text);
 }
 | e1=expr OrOp e2=expr
 {
-	SymTab s = symTabStack.getLast();
-	$id = s.Add(s.GetType($e1.id));
+	SymTab st = symTabStack.getLast();
+	$id = st.Add(symTabStack.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $OrOp.text);
 }
 /*| methodCall
