@@ -6,8 +6,11 @@ class Program {
 	void init ( )
 	{
 		a[0xF]+=2;
+		a[0xF]-=2;
+		
 		b = a[0xA];
 
 		b+=1;
+		b-=1;
 	}
 }

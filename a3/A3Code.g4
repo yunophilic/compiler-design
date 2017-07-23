@@ -279,31 +279,34 @@ public class Quad {
 	}
 
 	void Print() {
-		if (symTabStack.GetName(src2).equals("") && op.equals("=")) { //assignment operation ('=')
+		switch (op) {
+			case "=": //assignment operation ('=')
+				System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " " 
+					+ op + " " + symTabStack.GetName(src1));
+				break;
 
-			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " " 
-				+ op + " " + symTabStack.GetName(src1));
+			case "[]r": //array access read
+				System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
+					+ symTabStack.GetName(src1) + " [ " + symTabStack.GetName(src2) + " ] ");
+				break;
 
-		} else if(symTabStack.GetName(src2).equals("")) { //unary operation ('-', '!')
+			case "[]w": //array access write
+				System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + 
+					" [ " + symTabStack.GetName(src1) + " ] = " + symTabStack.GetName(src2));
+				break;
 
-			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
-				+ op + " " + symTabStack.GetName(src1));
+			case "method_decl":
+				break;
 
-		} else if(op.equals("[]r")) { //array access read
-
-			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
-				+ symTabStack.GetName(src1) + " [ " + symTabStack.GetName(src2) + " ] ");
-
-		} else if(op.equals("[]w")) { //array access write
-
-			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + 
-				" [ " + symTabStack.GetName(src1) + " ] = " + symTabStack.GetName(src2));
-
-		} else { //binary operation
-
-			System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
-				+ symTabStack.GetName(src1) + " " + op + " " + symTabStack.GetName(src2));
-
+			default:
+				if(symTabStack.GetName(src2).equals("")) { //unary operation ('-', '!')
+					System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
+						+ op + " " + symTabStack.GetName(src1));
+				} else { //binary operation
+					System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
+						+ symTabStack.GetName(src1) + " " + op + " " + symTabStack.GetName(src2));
+				}
+				break;
 		}
 	}
 
@@ -363,6 +366,7 @@ prog
 
 field_decls 
 : f=field_decls field_decl ';'
+| f=field_decls inited_field_decl ';'
 | 
 ;
 
@@ -373,15 +377,15 @@ field_decl returns [DataType t]
 	$t = $f.t;
 	symTabStack.getFirst().insert($Ident.text, $t);
 }
-| Type Ident
-{
-	$t = DataType.valueOf($Type.text.toUpperCase());
-	symTabStack.getFirst().insert($Ident.text, $t);
-}
 | f=field_decl ',' Ident '[' num ']'
 {
 	$t = $f.t;
 	symTabStack.getFirst().insert($Ident.text, $t, $num.text);
+}
+| Type Ident
+{
+	$t = DataType.valueOf($Type.text.toUpperCase());
+	symTabStack.getFirst().insert($Ident.text, $t);
 }
 | Type Ident '[' num ']'
 {
@@ -390,19 +394,35 @@ field_decl returns [DataType t]
 }
 ;
 
+inited_field_decl returns [int id]
+: Type Ident '=' literal 
+{
+	
+}
+;
 
+method_decls
+: m=method_decls method_decl
+{
+}
+|
+{
+}
+;
 
 
 method_decl 
 : Type Ident '(' params ')' block
 {
-	symTabStack.getFirst()
+	int id = symTabStack.getFirst()
 		.insert($Ident.text, DataType.valueOf($Type.text.toUpperCase()));
+	q.Add(id, -1, -1, "method_decl");
 }
 | Void Ident '(' params ')' block
 {
-	symTabStack.getFirst()
+	int id = symTabStack.getFirst()
 		.insert($Ident.text, DataType.valueOf($Void.text.toUpperCase()));	
+	q.Add(id, -1, -1, "method_decl");
 }
 ;
 
@@ -486,22 +506,40 @@ statement
 				q.Add($location.id, $expr.id, -1, "=");
 			}
 			break;
+
 		case "+=":
 			if ($location.isArrAccess){
 				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
 				q.Add(tempId, $location.id, $location.offset, "[]r");
 
 				int secondTempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
-				q.Add(secondTempId, tempId, $expr.id, "=");
+				q.Add(secondTempId, tempId, $expr.id, "+");
 
-				q.Add($location.id, $location.offset, tempId, "[]w");
+
+				q.Add($location.id, $location.offset, secondTempId, "[]w");
 			} else {
 				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
-				q.Add(tempId, $location.id, $expr.id, "=");
-				q.Add($location.id, $expr.id, -1, "+=");
+				q.Add(tempId, $location.id, $expr.id, "+");
+
+				q.Add($location.id, tempId, -1, "=");
 			}
 			break;
+
 		case "-=":
+			if ($location.isArrAccess){
+				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
+				q.Add(tempId, $location.id, $location.offset, "[]r");
+
+				int secondTempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
+				q.Add(secondTempId, tempId, $expr.id, "-");
+
+				q.Add($location.id, $location.offset, secondTempId, "[]w");
+			} else {
+				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
+				q.Add(tempId, $location.id, $expr.id, "-");
+
+				q.Add($location.id, tempId, -1, "=");
+			}
 			break;
 		default:
 			break;
@@ -521,11 +559,11 @@ statement
 }
 | Ret ';'
 {
-	symTabStack.pop();
+	q.Add(-1, -1, -1, "ret");
 }
 | Ret '(' expr ')' ';'
 {
-	symTabStack.pop();
+	q.Add(-1, $expr.id, -1, "ret");
 }
 | Brk ';'
 {
@@ -539,10 +577,58 @@ statement
 {
 	
 }
-/*| methodCall ';'
+| methodCall ';'
 {
 	
-}*/
+}
+;
+
+methodCall returns [int id]
+: Ident '(' args ')'
+{
+
+}
+| Callout '(' Str calloutArgs ')'
+{
+
+}
+;
+
+args
+: someArgs
+{
+
+}
+|
+{
+
+}
+;
+
+someArgs
+: t=someArgs ',' expr
+{
+
+}
+| expr
+{
+
+}
+;
+
+calloutArgs
+: c=calloutArgs ',' expr
+{
+
+}
+| c=calloutArgs ',' Str
+{
+
+}
+|
+{
+
+}
 ;
 
 
@@ -613,10 +699,10 @@ expr returns [int id]
 	$id = st.Add(symTabStack.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $OrOp.text);
 }
-/*| methodCall
+| methodCall
 {
 
-}*/
+}
 ;
 
 
