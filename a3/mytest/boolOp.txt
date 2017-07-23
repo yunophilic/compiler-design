@@ -1,0 +1,13 @@
+class Program {
+
+	void dos ( )
+	{
+		int x;
+		boolean y;
+
+		y = (x==1) && (x>2);
+		if(y) {
+			x = 1;
+		}
+	}
+}

@@ -15,7 +15,7 @@ import java.util.*;
 
 public enum DataType {
 	INT, BOOLEAN, VOID, 
-	STR, INVALID
+	STR, CHAR, INVALID
 }
 
 
@@ -267,14 +267,34 @@ public class Quad {
 		op = o;
 	}
 
+	String getOp() {
+		return op;
+	}
+
+	int getSrc1() {
+		return src1;
+	}
+
+	void setSrc1(int s1) {
+		src1 = s1;
+	}
+
+	int getSrc2() {
+		return src2;
+	}
+
+	void setSrc2(int s2) {
+		src2 = s2;
+	}
+
 	void Print() {
 		switch (op) {
-			case "=": //assignment operation ('=')
+			case "=": //assignment operation
 				System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " " 
 					+ op + " " + symTabStack.GetName(src1));
 				break;
 
-			case "!":
+			case "!": //negation operation
 				System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = !" + symTabStack.GetName(src1));
 				break;
 
@@ -295,6 +315,24 @@ public class Quad {
 			case "param":
 				System.out.println("L_" + label + ": " + symTabStack.GetName(src1) + " param");
 				break;
+
+			case "if":
+				System.out.println("L_" + label + ": if " + symTabStack.GetName(src1) 
+					+ " goto L_" + symTabStack.GetName(src2));
+				break;
+
+			case "ifFalse":
+				System.out.println("L_" + label + ": ifFalse " + symTabStack.GetName(src1) 
+					+ " goto L_" + symTabStack.GetName(src2));
+				break;
+
+			case "goto":
+				System.out.println("L_" + label + ": goto L_" + symTabStack.GetName(src1));
+				break;
+
+			case "end_of_meth":
+				System.out.println("L_" + label);
+				break;				
 
 			default:
 				System.out.println("L_" + label + ": " + symTabStack.GetName(dst) + " = " 
@@ -325,8 +363,26 @@ public class QuadTab {
 		qt.set(label, new Quad(label, dst, src1, src2, op));
 	}
 
-	int CurrLabel() {
-		return (qt.size()-1);
+	void backpatch(List<Integer> list, int targetLabel) {
+		int targetLabelId = symTabStack.getLast().insert(targetLabel + "", DataType.INT);
+		System.out.println("targetLabel: " + targetLabel);
+		for (int item : list) {
+			System.out.println("item: " + item);
+			Quad q = qt.get(item);
+			switch(q.getOp()) {
+				case "goto":
+					q.setSrc1(targetLabelId);
+					break;
+				case "if":
+				case "ifFalse":
+					q.setSrc2(targetLabelId);
+					break;
+			}
+		}
+	}
+
+	int NextInstr() {
+		return (qt.size());
 	}
 
 	void Print() {
@@ -355,7 +411,7 @@ prog
 : Class Program '{' field_decls method_decls '}'
 {
 	//Print
-	symTabStack.Print();
+	//symTabStack.Print();
 	System.out.println("------------------------------------");
 	q.debug();
 	System.out.println("------------------------------------");
@@ -413,21 +469,23 @@ method_decls
 
 
 method_decl 
-: Type Ident '(' params ')' markerBlank block
+: Type Ident '(' params ')' markerTemp block
 {
-	System.out.println("resolve method");
+	//System.out.println("resolve method");
 	int id = symTabStack.getFirst()
 		.insert($Ident.text, DataType.valueOf($Type.text.toUpperCase()));
 
-	q.Set($markerBlank.label, -1, id, -1, "method_decl");
+	q.Set($markerTemp.label, -1, id, -1, "method_decl"); //fill in temp slot
+	q.Add(-1, -1, -1, "end_of_meth");
 }
-| Void Ident '(' params ')' markerBlank block
+| Void Ident '(' params ')' markerTemp block
 {
-	System.out.println("resolve method");
+	//System.out.println("resolve method");
 	int id = symTabStack.getFirst()
 		.insert($Ident.text, DataType.valueOf($Void.text.toUpperCase()));	
 
-	q.Set($markerBlank.label, -1, id, -1, "method_decl");
+	q.Set($markerTemp.label, -1, id, -1, "method_decl"); //fill in temp slot
+	q.Add(-1, -1, -1, "end_of_meth");
 }
 ;
 
@@ -453,10 +511,11 @@ nextParams /*returns /*[MySet s]*/
 }
 ;
 
-block
+block returns [List<Integer> nextList]
 : '{' var_decls statements '}'
 {
 	//System.out.println("resolve block");
+	$nextList = $statements.nextList;
 }
 ;
 
@@ -493,21 +552,29 @@ var_decl returns [List<AbstractMap.SimpleEntry<String, DataType>> symbols, DataT
 
 
 
-statements
-: statement t=statements
+statements returns [List<Integer> nextList]
+: statement t=statements m=marker
 {
-
+	/*for(int item : $statement.nextList) {
+		System.out.println("nextList item: " + item);
+	}*/
+	
+	//$nextList = $t.nextList;
+	$nextList = $statement.nextList;
+	q.backpatch($nextList, $m.label);
 }
 |
 {
+	$nextList = new ArrayList<>();
 	symTabStack.pop();
 }
 ;
 
 
-statement
+statement returns [List<Integer> nextList]
 : location eqOp expr ';'
 {
+	$nextList = new ArrayList<>();
 	switch ($eqOp.text)
 	{
 		case "=":
@@ -555,9 +622,18 @@ statement
 			break;
 	}
 }
-| If '(' expr ')' block
+| If '(' expr ')' m=marker block
 {
+	/*for(int item : $expr.trueList) {
+		System.out.println("trueList item: " + item);
+	}*/
 
+	q.backpatch($expr.trueList, $m.label);
+	
+	List<Integer> merged = new ArrayList<>();
+	merged.addAll($expr.falseList);
+	merged.addAll($block.nextList);
+	$nextList = merged;
 }
 | If '(' expr ')' b1=block Else b2=block
 {
@@ -585,7 +661,7 @@ statement
 }
 | block
 {
-
+	$nextList = $block.nextList;
 }
 | methodCall ';'
 {
@@ -649,10 +725,25 @@ calloutArgs returns [int count]
 ;
 
 
-expr returns [int id]
+expr returns [
+	int id,
+	List<Integer> trueList,
+	List<Integer> falseList
+]
 : literal 
 {
 	$id = $literal.id;
+
+	if ($literal.text.equals("true")) {
+		$trueList = new ArrayList<>();
+		$trueList.add(q.NextInstr());
+		q.Add(-1, -1, -1, "goto");
+
+	} else if ($literal.text.equals("false")) {
+		$falseList = new ArrayList<>();
+		$falseList.add(q.NextInstr());
+		q.Add(-1, -1, -1, "goto");
+	}
 }
 | location
 {
@@ -666,6 +757,8 @@ expr returns [int id]
 | '(' e=expr ')'
 {
 	$id = $e.id;
+	$trueList = $e.trueList;
+	$falseList = $e.falseList;
 }
 | SubOp e=expr
 {
@@ -679,6 +772,9 @@ expr returns [int id]
 	SymTab st = symTabStack.getLast();
 	$id = st.Add(symTabStack.GetType($e.id));
 	q.Add($id, $e.id, -1, "!");
+
+	$trueList = $e.falseList;
+	$falseList = $e.trueList;
 }
 | e1=expr MulDiv e2=expr
 {
@@ -703,18 +799,37 @@ expr returns [int id]
 	SymTab st = symTabStack.getLast();
 	$id = st.Add(symTabStack.GetType($e1.id));
 	q.Add($id, $e1.id, $e2.id, $RelOp.text);
+
+	$trueList = new ArrayList<>();
+	$trueList.add(q.NextInstr());
+	q.Add(-1, $id, -1, "if");
+
+	$falseList = new ArrayList<>();
+	$falseList.add(q.NextInstr());
+	q.Add(-1, $id, -1, "ifFalse");
 }
-| e1=expr AndOp e2=expr
+| e1=expr AndOp m=marker e2=expr
 {
-	SymTab st = symTabStack.getLast();
+	$id = -1;
+	q.backpatch($e1.trueList, $m.label);
+	
+	List<Integer> merged = new ArrayList<>();
+	merged.addAll($e1.falseList);
+	merged.addAll($e2.falseList);
+	$falseList = merged;
+
+	$trueList = $e2.trueList;
+	/*SymTab st = symTabStack.getLast();
 	$id = st.Add(symTabStack.GetType($e1.id));
-	q.Add($id, $e1.id, $e2.id, $AndOp.text);
+	q.Add($id, $e1.id, $e2.id, $AndOp.text);*/
+
 }
 | e1=expr OrOp e2=expr
 {
-	SymTab st = symTabStack.getLast();
+	$id = -1;
+	/*SymTab st = symTabStack.getLast();
 	$id = st.Add(symTabStack.GetType($e1.id));
-	q.Add($id, $e1.id, $e2.id, $OrOp.text);
+	q.Add($id, $e1.id, $e2.id, $OrOp.text);*/
 }
 | methodCall
 {
@@ -727,7 +842,7 @@ expr returns [int id]
 
 
 location returns [int id, int offset, boolean isArrAccess]
-:Ident
+: Ident
 {
 	$id = symTabStack.Find($Ident.text);
 	$isArrAccess = false;
@@ -758,7 +873,13 @@ literal returns [int id]
 	$id = symTabStack.getLast().insert($num.text, DataType.INT);
 }
 | Char
+{
+	$id = symTabStack.getLast().insert($Char.text, DataType.CHAR);
+}
 | BoolLit
+{
+	$id = symTabStack.getLast().insert($BoolLit.text, DataType.BOOLEAN);
+}
 ;
 
 eqOp
@@ -772,11 +893,11 @@ eqOp
 marker returns [int label]
 :
 {
-	$label = q.CurrLabel();
+	$label = q.NextInstr();
 }
 ;
 
-markerBlank returns [int label]
+markerTemp returns [int label]
 :
 {
 	$label = q.Add(-1, -1, -1, null);
