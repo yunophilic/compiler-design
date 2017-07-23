@@ -1,0 +1,11 @@
+class Program {
+
+	int a = 0;
+
+	void fun ( )
+	{
+		int d;
+		d = 10;
+		a = d;
+	}
+}
