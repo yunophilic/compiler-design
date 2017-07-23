@@ -331,7 +331,7 @@ public class Quad {
 				break;
 
 			case "end_of_meth":
-				System.out.println("L_" + label);
+				System.out.println("L_" + label + ":");
 				break;				
 
 			default:
@@ -366,16 +366,23 @@ public class QuadTab {
 	void backpatch(List<Integer> list, int targetLabel) {
 		int targetLabelId = symTabStack.getLast().insert(targetLabel + "", DataType.INT);
 		System.out.println("targetLabel: " + targetLabel);
+
 		for (int item : list) {
 			System.out.println("item: " + item);
 			Quad q = qt.get(item);
+
+			//only patch if haven't been patched
 			switch(q.getOp()) {
 				case "goto":
-					q.setSrc1(targetLabelId);
+					//if (q.getSrc1() == -1) {
+						q.setSrc1(targetLabelId);
+					//}
 					break;
 				case "if":
 				case "ifFalse":
-					q.setSrc2(targetLabelId);
+					//if (q.getSrc2() == -1)  {
+						q.setSrc2(targetLabelId);
+					//}
 					break;
 			}
 		}
@@ -555,10 +562,6 @@ var_decl returns [List<AbstractMap.SimpleEntry<String, DataType>> symbols, DataT
 statements returns [List<Integer> nextList]
 : statement t=statements m=marker
 {
-	/*for(int item : $statement.nextList) {
-		System.out.println("nextList item: " + item);
-	}*/
-	
 	//$nextList = $t.nextList;
 	$nextList = $statement.nextList;
 	q.backpatch($nextList, $m.label);
@@ -575,13 +578,35 @@ statement returns [List<Integer> nextList]
 : location eqOp expr ';'
 {
 	$nextList = new ArrayList<>();
+
+	int srcId = $expr.id;
+
+	if ($expr.id == -1) { //&& and ||
+		SymTab st = symTabStack.getLast();
+		srcId = st.Add(symTabStack.GetType($expr.id));
+
+		int trueId = st.insert("true", DataType.BOOLEAN);
+		int tLabel = q.Add(srcId, trueId, -1, "=");
+		q.backpatch($expr.trueList, tLabel);
+
+		List<Integer> temp = new ArrayList<>();
+		temp.add(q.Add(-1, -1, -1, "goto"));
+
+		int falseId = st.insert("false", DataType.BOOLEAN);
+		int fLabel = q.Add(srcId, falseId, -1, "=");
+		q.backpatch($expr.falseList, fLabel);
+
+		q.backpatch(temp, fLabel + 1);
+	}
+
+
 	switch ($eqOp.text)
 	{
 		case "=":
 			if ($location.isArrAccess){
-				q.Add($location.id, $location.offset, $expr.id, "[]w");
+				q.Add($location.id, $location.offset, srcId, "[]w");
 			} else {
-				q.Add($location.id, $expr.id, -1, "=");
+				q.Add($location.id, srcId, -1, "=");
 			}
 			break;
 
@@ -591,12 +616,12 @@ statement returns [List<Integer> nextList]
 				q.Add(tempId, $location.id, $location.offset, "[]r");
 
 				int secondTempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
-				q.Add(secondTempId, tempId, $expr.id, "+");
+				q.Add(secondTempId, tempId, srcId, "+");
 
 				q.Add($location.id, $location.offset, secondTempId, "[]w");
 			} else {
 				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
-				q.Add(tempId, $location.id, $expr.id, "+");
+				q.Add(tempId, $location.id, srcId, "+");
 
 				q.Add($location.id, tempId, -1, "=");
 			}
@@ -624,10 +649,6 @@ statement returns [List<Integer> nextList]
 }
 | If '(' expr ')' m=marker block
 {
-	/*for(int item : $expr.trueList) {
-		System.out.println("trueList item: " + item);
-	}*/
-
 	q.backpatch($expr.trueList, $m.label);
 	
 	List<Integer> merged = new ArrayList<>();
@@ -635,9 +656,18 @@ statement returns [List<Integer> nextList]
 	merged.addAll($block.nextList);
 	$nextList = merged;
 }
-| If '(' expr ')' b1=block Else b2=block
+| If '(' expr ')' m1=marker b1=block n=markerGoto
+	Else m2=marker b2=block
 {
+	q.backpatch($expr.trueList, $m1.label);
+	q.backpatch($expr.falseList, $m2.label);
 
+	List<Integer> merged = new ArrayList<>();
+	merged.addAll($b1.nextList);
+	merged.addAll($n.nextList);
+	merged.addAll($b2.nextList);
+
+	$nextList = merged;
 }
 | For Ident '=' e1=expr ',' e2=expr block
 {
@@ -727,6 +757,8 @@ calloutArgs returns [int count]
 
 expr returns [
 	int id,
+	boolean isLiteral,
+	boolean isLocation,
 	List<Integer> trueList,
 	List<Integer> falseList
 ]
@@ -734,25 +766,30 @@ expr returns [
 {
 	$id = $literal.id;
 
-	if ($literal.text.equals("true")) {
+	if (symTabStack.GetType($id) == DataType.BOOLEAN) {
 		$trueList = new ArrayList<>();
-		$trueList.add(q.NextInstr());
-		q.Add(-1, -1, -1, "goto");
-
-	} else if ($literal.text.equals("false")) {
 		$falseList = new ArrayList<>();
-		$falseList.add(q.NextInstr());
-		q.Add(-1, -1, -1, "goto");
 	}
+
+	$isLiteral = true;
 }
 | location
 {
+	DataType type = symTabStack.GetType($location.id);
+
+	if (type == DataType.BOOLEAN) {
+		$trueList = new ArrayList<>();
+		$falseList = new ArrayList<>();
+	}
+
 	if ($location.isArrAccess) {
-		$id = symTabStack.getLast().Add(symTabStack.GetType($location.id));
+		$id = symTabStack.getLast().Add(type);
 		q.Add($id, $location.id, $location.offset, "[]r");
 	} else {
 		$id = $location.id;
 	}
+
+	$isLocation = true;
 }
 | '(' e=expr ')'
 {
@@ -801,16 +838,15 @@ expr returns [
 	q.Add($id, $e1.id, $e2.id, $RelOp.text);
 
 	$trueList = new ArrayList<>();
-	$trueList.add(q.NextInstr());
-	q.Add(-1, $id, -1, "if");
+	$trueList.add(q.Add(-1, $id, -1, "if"));
 
 	$falseList = new ArrayList<>();
-	$falseList.add(q.NextInstr());
-	q.Add(-1, $id, -1, "ifFalse");
+	$falseList.add(q.Add(-1, $id, -1, "ifFalse"));
 }
 | e1=expr AndOp m=marker e2=expr
 {
 	$id = -1;
+
 	q.backpatch($e1.trueList, $m.label);
 	
 	List<Integer> merged = new ArrayList<>();
@@ -819,17 +855,21 @@ expr returns [
 	$falseList = merged;
 
 	$trueList = $e2.trueList;
-	/*SymTab st = symTabStack.getLast();
-	$id = st.Add(symTabStack.GetType($e1.id));
-	q.Add($id, $e1.id, $e2.id, $AndOp.text);*/
 
+	//literal operands
 }
-| e1=expr OrOp e2=expr
+| e1=expr OrOp m=marker e2=expr
 {
 	$id = -1;
-	/*SymTab st = symTabStack.getLast();
-	$id = st.Add(symTabStack.GetType($e1.id));
-	q.Add($id, $e1.id, $e2.id, $OrOp.text);*/
+
+	q.backpatch($e1.falseList, $m.label);
+
+	List<Integer> merged = new ArrayList<>();
+	merged.addAll($e1.trueList);
+	merged.addAll($e2.trueList);
+	$trueList = merged;
+
+	$falseList = $e2.falseList;
 }
 | methodCall
 {
@@ -901,6 +941,14 @@ markerTemp returns [int label]
 :
 {
 	$label = q.Add(-1, -1, -1, null);
+}
+;
+
+markerGoto returns [List<Integer> nextList]
+:
+{
+	$nextList = new ArrayList();
+	$nextList.add(q.Add(-1, -1, -1, "goto"));
 }
 ;
 

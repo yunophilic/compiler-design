@@ -1,4 +1,59 @@
 targetLabel: 4
 item: 2
+targetLabel: 7
+item: 5
 targetLabel: 9
-targetLabel: 8
+item: 3
+item: 6
+targetLabel: 10
+item: 8
+targetLabel: 12
+targetLabel: 14
+targetLabel: 11
+item: 15
+targetLabel: 13
+item: 16
+targetLabel: 18
+targetLabel: 18
+item: 12
+targetLabel: 18
+------------------------------------
+0	method_decl	21	-1	-1
+1	==	0	2	3
+2	if	3	6	-1
+3	ifFalse	3	11	-1
+4	>	0	4	5
+5	if	5	9	-1
+6	ifFalse	5	11	-1
+7	=	8	-1	7
+8	goto	12	-1	-1
+9	=	10	-1	7
+10	=	7	-1	1
+11	=	13	-1	0
+12	goto	20	-1	-1
+13	=	15	-1	0
+14	=	1	-1	17
+15	if	17	18	-1
+16	ifFalse	17	19	-1
+17	=	10	-1	1
+18	end_of_meth	-1	-1	-1
+------------------------------------
+dos: 
+L_1: t_0 = x == 1
+L_2: if t_0 goto L_4
+L_3: ifFalse t_0 goto L_9
+L_4: t_1 = x > 2
+L_5: if t_1 goto L_7
+L_6: ifFalse t_1 goto L_9
+L_7: t_2 = true
+L_8: goto L_10
+L_9: t_2 = false
+L_10: y = t_2
+L_11: x = 1
+L_12: goto L_18
+L_13: x = 2
+L_14: t_3 = y
+L_15: if t_3 goto L_11
+L_16: ifFalse t_3 goto L_13
+L_17: y = false
+L_18:
