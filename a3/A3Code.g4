@@ -311,16 +311,22 @@ public class Quad {
 
 public class QuadTab {
 	List<Quad> qt;
-	int size;
 
 	QuadTab () {
 		qt = new ArrayList<>();
-		size = 0;
 	}
 
 	int Add(int dst, int src1, int src2, String op) {
-		qt.add(new Quad(size, dst, src1, src2, op));
-		return (size ++);
+		qt.add(new Quad(qt.size(), dst, src1, src2, op));
+		return (qt.size()-1);
+	}
+
+	void Set(int label, int dst, int src1, int src2, String op) {
+		qt.set(label, new Quad(label, dst, src1, src2, op));
+	}
+
+	int CurrLabel() {
+		return (qt.size()-1);
 	}
 
 	void Print() {
@@ -407,19 +413,21 @@ method_decls
 
 
 method_decl 
-: Type Ident '(' params ')' block
+: Type Ident '(' params ')' markerBlank block
 {
 	System.out.println("resolve method");
 	int id = symTabStack.getFirst()
 		.insert($Ident.text, DataType.valueOf($Type.text.toUpperCase()));
-	q.Add(-1, id, -1, "method_decl");
+
+	q.Set($markerBlank.label, -1, id, -1, "method_decl");
 }
-| Void Ident '(' params ')' block
+| Void Ident '(' params ')' markerBlank block
 {
 	System.out.println("resolve method");
 	int id = symTabStack.getFirst()
 		.insert($Ident.text, DataType.valueOf($Void.text.toUpperCase()));	
-	q.Add(-1, id, -1, "method_decl");
+
+	q.Set($markerBlank.label, -1, id, -1, "method_decl");
 }
 ;
 
@@ -445,11 +453,10 @@ nextParams /*returns /*[MySet s]*/
 }
 ;
 
-block returns [int qId]
+block
 : '{' var_decls statements '}'
 {
-	System.out.println("resolve block");
-	$qId = -1;
+	//System.out.println("resolve block");
 }
 ;
 
@@ -486,8 +493,11 @@ var_decl returns [List<AbstractMap.SimpleEntry<String, DataType>> symbols, DataT
 
 
 
-statements 
+statements
 : statement t=statements
+{
+
+}
 |
 {
 	symTabStack.pop();
@@ -495,50 +505,50 @@ statements
 ;
 
 
-statement returns [int qId]
+statement
 : location eqOp expr ';'
 {
 	switch ($eqOp.text)
 	{
 		case "=":
 			if ($location.isArrAccess){
-				$qId = q.Add($location.id, $location.offset, $expr.id, "[]w");
+				q.Add($location.id, $location.offset, $expr.id, "[]w");
 			} else {
-				$qId = q.Add($location.id, $expr.id, -1, "=");
+				q.Add($location.id, $expr.id, -1, "=");
 			}
 			break;
 
 		case "+=":
 			if ($location.isArrAccess){
 				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
-				$qId = q.Add(tempId, $location.id, $location.offset, "[]r");
+				q.Add(tempId, $location.id, $location.offset, "[]r");
 
 				int secondTempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
-				$qId = q.Add(secondTempId, tempId, $expr.id, "+");
+				q.Add(secondTempId, tempId, $expr.id, "+");
 
-				$qId = q.Add($location.id, $location.offset, secondTempId, "[]w");
+				q.Add($location.id, $location.offset, secondTempId, "[]w");
 			} else {
 				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
-				$qId = q.Add(tempId, $location.id, $expr.id, "+");
+				q.Add(tempId, $location.id, $expr.id, "+");
 
-				$qId = q.Add($location.id, tempId, -1, "=");
+				q.Add($location.id, tempId, -1, "=");
 			}
 			break;
 
 		case "-=":
 			if ($location.isArrAccess){
 				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
-				$qId = q.Add(tempId, $location.id, $location.offset, "[]r");
+				q.Add(tempId, $location.id, $location.offset, "[]r");
 
 				int secondTempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
-				$qId = q.Add(secondTempId, tempId, $expr.id, "-");
+				q.Add(secondTempId, tempId, $expr.id, "-");
 
-				$qId = q.Add($location.id, $location.offset, secondTempId, "[]w");
+				q.Add($location.id, $location.offset, secondTempId, "[]w");
 			} else {
 				int tempId = symTabStack.getLast().Add(symTabStack.GetType($location.id));
-				$qId = q.Add(tempId, $location.id, $expr.id, "-");
+				q.Add(tempId, $location.id, $expr.id, "-");
 
-				$qId = q.Add($location.id, tempId, -1, "=");
+				q.Add($location.id, tempId, -1, "=");
 			}
 			break;
 		default:
@@ -547,40 +557,39 @@ statement returns [int qId]
 }
 | If '(' expr ')' block
 {
-	$qId = -1;
+
 }
 | If '(' expr ')' b1=block Else b2=block
 {
-	$qId = -1;
+
 }
 | For Ident '=' e1=expr ',' e2=expr block
 {
-	$qId = -1;
+
 }
 | Ret ';'
 {
-	$qId = q.Add(-1, -1, -1, "ret");
+	q.Add(-1, -1, -1, "ret");
 }
 | Ret '(' expr ')' ';'
 {
-	$qId = q.Add(-1, $expr.id, -1, "ret");
+	q.Add(-1, $expr.id, -1, "ret");
 }
 | Brk ';'
 {
-	$qId = -1;
+
 }
 | Cnt ';'
 {
-	$qId = -1;
+
 }
 | block
 {
-	$qId = -1;
+
 }
 | methodCall ';'
 {
 	q.Add(-1, $methodCall.id, $methodCall.argsCount, "call");
-	$qId = -1;
 }
 ;
 
@@ -755,6 +764,23 @@ literal returns [int id]
 eqOp
 : '='
 | AssignOp
+;
+
+//helper markers 
+//one only marks while the other adds a new row in the quad table and mark it
+
+marker returns [int label]
+:
+{
+	$label = q.CurrLabel();
+}
+;
+
+markerBlank returns [int label]
+:
+{
+	$label = q.Add(-1, -1, -1, null);
+}
 ;
 
 //--------------------------------------------- END OF SESSION 2 -----------------------------------
