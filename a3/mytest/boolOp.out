@@ -1,0 +1,38 @@
+targetLabel: 4
+item: 2
+targetLabel: 8
+targetLabel: 10
+targetLabel: 7
+item: 5
+targetLabel: 9
+item: 3
+item: 6
+targetLabel: 11
+targetLabel: 11
+item: 7
+------------------------------------
+0	method_decl	15	-1	-1
+1	==	0	2	3
+2	if	3	6	-1
+3	ifFalse	3	12	-1
+4	>	0	4	5
+5	if	5	11	-1
+6	ifFalse	5	12	-1
+7	=	7	-1	0
+8	goto	-1	-1	-1
+9	=	9	-1	0
+10	=	13	-1	1
+11	end_of_meth	-1	-1	-1
+------------------------------------
+dos: 
+L_1: t_0 = x == 1
+L_2: if t_0 goto L_4
+L_3: ifFalse t_0 goto L_9
+L_4: t_1 = x > 2
+L_5: if t_1 goto L_7
+L_6: ifFalse t_1 goto L_9
+L_7: x = 1
+L_8: goto L_
+L_9: x = 2
+L_10: y = false
+L_11:

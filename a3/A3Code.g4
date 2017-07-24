@@ -664,19 +664,25 @@ statement returns [List<Integer> nextList]
 	$nextList = new ArrayList<>();
 
 	int iteratorId = symTabStack.Find($Ident.text);
-	q.Set($forMarker.label1, iteratorId, $e1.id, -1, "=");
 
-	q.Get($forMarker.label2).setSrc1(iteratorId);
-	q.Get($forMarker.label2).setSrc2($e1.id);
+	SymTab st = symTabStack.getLast();
+	
+	int incrId = st.insert("1", DataType.INT);
 
-	int exitId = symTabStack.getLast().insert(q.NextInstr() + "", DataType.INT);
-	q.Set($forMarker.label3, -1, $forMarker.tmpId, exitId, "if");
-	q.Set($forMarker.label4, -1, $forMarker.tmpId, exitId, "ifFalse");
-
-	int startId = symTabStack.getLast().insert($forMarker.label2 + "", DataType.INT);
-	int incrId = symTabStack.getLast().insert("1", DataType.INT);
 	q.Add(iteratorId, iteratorId, incrId, "+");
-	q.Add(-1, startId, -1, "goto");
+
+	int loopRedoLabelId = st.insert($forMarker.label2 + "", DataType.INT);
+	q.Add(-1, loopRedoLabelId, -1, "goto");
+
+	// manual back patch
+
+	q.Set($forMarker.label1, iteratorId, $e1.id, -1, "=");
+	q.Set($forMarker.label2, $forMarker.tmpId, iteratorId, $e1.id, "<");
+
+	int loopEnterLabelId = st.insert($forMarker.label4 + 1 + "", DataType.INT);
+	int loopExitLabelId = st.insert(q.NextInstr() + "", DataType.INT);
+	q.Set($forMarker.label3, -1, $forMarker.tmpId, loopEnterLabelId, "if");
+	q.Set($forMarker.label4, -1, $forMarker.tmpId, loopExitLabelId, "ifFalse");
 }
 | Ret ';'
 {
@@ -970,8 +976,8 @@ forMarker returns [
 :
 {
 	$tmpId = symTabStack.getLast().Add(DataType.INT);
-	$label1 = q.Add($tmpId, -1, -1, "=");
-	$label2 = q.Add($tmpId, -1, -1, "<");
+	$label1 = q.Add(-1, -1, -1, null);
+	$label2 = q.Add(-1, -1, -1, null);
 	$label3 = q.Add(-1, -1, -1, null);
 	$label4 = q.Add(-1, -1, -1, null);
 }
