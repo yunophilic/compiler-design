@@ -378,15 +378,15 @@ public class QuadTab {
 			//only patch if haven't been patched
 			switch(q.getOp()) {
 				case "goto":
-					//if (q.getSrc1() == -1) {
+					if (q.getSrc1() == -1) {
 						q.setSrc1(targetLabelId);
-					//}
+					}
 					break;
 				case "if":
 				case "ifFalse":
-					//if (q.getSrc2() == -1)  {
+					if (q.getSrc2() == -1)  {
 						q.setSrc2(targetLabelId);
-					//}
+					}
 					break;
 			}
 		}
@@ -551,7 +551,7 @@ var_decl returns [List<AbstractMap.SimpleEntry<String, DataType>> symbols, DataT
 
 
 statements returns [List<Integer> nextList]
-: statement t=statements m=marker
+: statement m=marker t=statements 
 {
 	//$nextList = $t.nextList;
 	$nextList = $statement.nextList;
