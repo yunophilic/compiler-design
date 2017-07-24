@@ -363,6 +363,10 @@ public class QuadTab {
 		qt.set(label, new Quad(label, dst, src1, src2, op));
 	}
 
+	Quad Get(int label) {
+		return qt.get(label);
+	}
+
 	void backpatch(List<Integer> list, int targetLabel) {
 		int targetLabelId = symTabStack.getLast().insert(targetLabel + "", DataType.INT);
 		System.out.println("targetLabel: " + targetLabel);
@@ -496,32 +500,19 @@ method_decl
 }
 ;
 
-params /*returns [int id]*/
+params
 : Type Ident nextParams
-{
-
-}
 |
-{
-
-}
 ;
 
-nextParams /*returns /*[MySet s]*/
+nextParams
 : n=nextParams ',' Type Ident
-{
-
-}
 |
-{
-
-}
 ;
 
 block returns [List<Integer> nextList]
 : '{' var_decls statements '}'
 {
-	//System.out.println("resolve block");
 	$nextList = $statements.nextList;
 }
 ;
@@ -656,8 +647,7 @@ statement returns [List<Integer> nextList]
 	merged.addAll($block.nextList);
 	$nextList = merged;
 }
-| If '(' expr ')' m1=marker b1=block n=markerGoto
-	Else m2=marker b2=block
+| If '(' expr ')' m1=marker b1=block n=markerGoto Else m2=marker b2=block
 {
 	q.backpatch($expr.trueList, $m1.label);
 	q.backpatch($expr.falseList, $m2.label);
@@ -669,25 +659,42 @@ statement returns [List<Integer> nextList]
 
 	$nextList = merged;
 }
-| For Ident '=' e1=expr ',' e2=expr block
+| For Ident '=' e1=expr ',' e2=expr forMarker block
 {
+	$nextList = new ArrayList<>();
 
+	int iteratorId = symTabStack.Find($Ident.text);
+	q.Set($forMarker.label1, iteratorId, $e1.id, -1, "=");
+
+	q.Get($forMarker.label2).setSrc1(iteratorId);
+	q.Get($forMarker.label2).setSrc2($e1.id);
+
+	int exitId = symTabStack.getLast().insert(q.NextInstr() + "", DataType.INT);
+	q.Set($forMarker.label3, -1, $forMarker.tmpId, exitId, "if");
+	q.Set($forMarker.label4, -1, $forMarker.tmpId, exitId, "ifFalse");
+
+	int startId = symTabStack.getLast().insert($forMarker.label2 + "", DataType.INT);
+	int incrId = symTabStack.getLast().insert("1", DataType.INT);
+	q.Add(iteratorId, iteratorId, incrId, "+");
+	q.Add(-1, startId, -1, "goto");
 }
 | Ret ';'
 {
+	$nextList = new ArrayList<>();
 	q.Add(-1, -1, -1, "ret");
 }
 | Ret '(' expr ')' ';'
 {
+	$nextList = new ArrayList<>();
 	q.Add(-1, $expr.id, -1, "ret");
 }
 | Brk ';'
 {
-
+	$nextList = new ArrayList<>();
 }
 | Cnt ';'
 {
-
+	$nextList = new ArrayList<>();
 }
 | block
 {
@@ -695,6 +702,7 @@ statement returns [List<Integer> nextList]
 }
 | methodCall ';'
 {
+	$nextList = new ArrayList<>();
 	q.Add(-1, $methodCall.id, $methodCall.argsCount, "call");
 }
 ;
@@ -949,6 +957,23 @@ markerGoto returns [List<Integer> nextList]
 {
 	$nextList = new ArrayList();
 	$nextList.add(q.Add(-1, -1, -1, "goto"));
+}
+;
+
+forMarker returns [
+	int tmpId, 
+	int label1, 
+	int label2, 
+	int label3, 
+	int label4
+]
+:
+{
+	$tmpId = symTabStack.getLast().Add(DataType.INT);
+	$label1 = q.Add($tmpId, -1, -1, "=");
+	$label2 = q.Add($tmpId, -1, -1, "<");
+	$label3 = q.Add(-1, -1, -1, null);
+	$label4 = q.Add(-1, -1, -1, null);
 }
 ;
 
