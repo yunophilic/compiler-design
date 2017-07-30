@@ -709,7 +709,8 @@ statement returns [List<Integer> nextList]
 | methodCall ';'
 {
 	$nextList = new ArrayList<>();
-	q.Add(-1, $methodCall.id, $methodCall.argsCount, "call");
+	int argsCountId = st.insert(Integer.toString($methodCall.argsCount), DataType.INT);
+	q.Add(-1, $methodCall.id, argsCountId, "call");
 }
 ;
 
@@ -889,8 +890,8 @@ expr returns [
 {
 	SymTab st = symTabStack.getLast();
 	$id = st.Add(symTabStack.GetType($methodCall.id));
-	int argsNumId = st.insert(Integer.toString($methodCall.argsCount), DataType.INT);
-	q.Add($id, $methodCall.id, $methodCall.argsCount, "call");
+	int argsCountId = st.insert(Integer.toString($methodCall.argsCount), DataType.INT);
+	q.Add($id, $methodCall.id, argsCountId, "call");
 }
 ;
 
