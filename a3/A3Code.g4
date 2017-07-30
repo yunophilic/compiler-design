@@ -707,7 +707,7 @@ statement returns [
 	// manual back patch
 
 	q.Set($forMarker.label1, iteratorId, $e1.id, -1, "=");
-	q.Set($forMarker.label2, $forMarker.tmpId, iteratorId, $e1.id, "<");
+	q.Set($forMarker.label2, $forMarker.tmpId, iteratorId, $e2.id, "<");
 
 	int loopEnterLabelId = st.insert($forMarker.label4 + 1 + "", DataType.INT);
 	int loopExitLabelId = st.insert(q.NextInstr() + "", DataType.INT);
