@@ -662,21 +662,18 @@ statement returns [
 }
 | If '(' expr ')' m=marker block
 {
-	$breakList = new ArrayList<>();
-	$contList = new ArrayList<>();
-
 	q.backpatch($expr.trueList, $m.label);
 	
 	List<Integer> merged = new ArrayList<>();
 	merged.addAll($expr.falseList);
 	merged.addAll($block.nextList);
 	$nextList = merged;
+
+	$breakList = $block.breakList;
+	$contList = $block.contList;
 }
 | If '(' expr ')' m1=marker b1=block n=markerGoto Else m2=marker b2=block
 {
-	$breakList = new ArrayList<>();
-	$contList = new ArrayList<>();
-
 	q.backpatch($expr.trueList, $m1.label);
 	q.backpatch($expr.falseList, $m2.label);
 
@@ -684,8 +681,17 @@ statement returns [
 	merged.addAll($b1.nextList);
 	merged.addAll($n.nextList);
 	merged.addAll($b2.nextList);
-
 	$nextList = merged;
+
+	List<Integer> mergedBreak = new ArrayList<>();
+	mergedBreak.addAll($b1.breakList);
+	mergedBreak.addAll($b2.breakList);
+	$breakList = mergedBreak;
+
+	List<Integer> mergedCont = new ArrayList<>();
+	mergedCont.addAll($b1.contList);
+	mergedCont.addAll($b2.contList);
+	$contList = mergedCont;
 }
 | For Ident '=' e1=expr ',' e2=expr forMarker block
 {
@@ -699,7 +705,7 @@ statement returns [
 	
 	int incrId = st.insert("1", DataType.INT);
 
-	q.Add(iteratorId, iteratorId, incrId, "+");
+	int nextIterationLabel = q.Add(iteratorId, iteratorId, incrId, "+");
 
 	int loopRedoLabelId = st.insert($forMarker.label2 + "", DataType.INT);
 	q.Add(-1, loopRedoLabelId, -1, "goto");
@@ -715,8 +721,8 @@ statement returns [
 	q.Set($forMarker.label4, -1, $forMarker.tmpId, loopExitLabelId, "ifFalse");
 
 	//backpatch continue and break list
-	q.backpatch($block.breakList, loopExitLabelId);
-	q.backpatch($block.contList, loopRedoLabelId);
+	q.backpatch($block.breakList, q.NextInstr());
+	q.backpatch($block.contList, nextIterationLabel);
 }
 | Ret ';'
 {

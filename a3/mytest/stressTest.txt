@@ -1,0 +1,31 @@
+class Program {
+
+	int x;
+
+	void main ( )
+	{
+		int start;
+		int end;
+		int i;
+
+		start = 1;
+		end = 10;
+
+		for i = start, end
+		{
+			boolean y;
+
+			x += i;
+
+			if (x == 1 && y == false) {
+				y = true;
+			} else {
+				continue;
+			}
+
+			if (x == 3) {
+				break;
+			}
+		}
+	}
+}
