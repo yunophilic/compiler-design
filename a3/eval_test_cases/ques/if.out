@@ -1,0 +1,7 @@
+dos: 
+L_1: t_0 = a > 0
+L_2: if t_0 goto L_4
+L_3: ifFalse t_0 goto L_6
+L_4: t_1 = a / b
+L_5: c = t_1
+L_6:

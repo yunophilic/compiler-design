@@ -1,0 +1,13 @@
+main: 
+L_1: c = 0
+L_2: a = 1
+L_3: b = 10
+L_4: x = a
+L_5: t_0 = x < a
+L_6: if t_0 goto L_8
+L_7: ifFalse t_0 goto L_12
+L_8: t_1 = c + x
+L_9: c = t_1
+L_10: x = x + 1
+L_11: goto L_5
+L_12:

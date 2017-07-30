@@ -35,6 +35,8 @@ public class IdUtil {
 	}	
 }
 
+
+
 TempUtil tempUtil = new TempUtil();
 IdUtil idUtil = new IdUtil();
 
@@ -369,10 +371,10 @@ public class QuadTab {
 
 	void backpatch(List<Integer> list, int targetLabel) {
 		int targetLabelId = symTabStack.getLast().insert(targetLabel + "", DataType.INT);
-		System.out.println("targetLabel: " + targetLabel);
+		//System.out.println("targetLabel: " + targetLabel);
 
 		for (int item : list) {
-			System.out.println("item: " + item);
+			//System.out.println("item: " + item);
 			Quad q = qt.get(item);
 
 			//only patch if haven't been patched
@@ -423,9 +425,9 @@ prog
 {
 	//Print
 	//symTabStack.Print();
-	System.out.println("------------------------------------");
-	q.debug();
-	System.out.println("------------------------------------");
+	//System.out.println("------------------------------------");
+	//q.debug();
+	//System.out.println("------------------------------------");
 	q.Print();
 }
 ;
@@ -471,11 +473,7 @@ inited_field_decl
 
 method_decls
 : m=method_decls method_decl
-{
-}
 |
-{
-}
 ;
 
 
@@ -510,10 +508,16 @@ nextParams
 |
 ;
 
-block returns [List<Integer> nextList]
+block returns [
+	List<Integer> nextList,
+	List<Integer> breakList,
+	List<Integer> contList
+]
 : '{' var_decls statements '}'
 {
 	$nextList = $statements.nextList;
+	$breakList = $statements.breakList;
+	$contList = $statements.contList;
 }
 ;
 
@@ -550,25 +554,43 @@ var_decl returns [List<AbstractMap.SimpleEntry<String, DataType>> symbols, DataT
 
 
 
-statements returns [List<Integer> nextList]
+statements returns [
+	List<Integer> nextList,
+	List<Integer> breakList,
+	List<Integer> contList
+]
 : statement m=marker t=statements 
 {
-	//$nextList = $t.nextList;
 	$nextList = $statement.nextList;
 	q.backpatch($nextList, $m.label);
+
+	$breakList = $t.breakList;
+	$breakList.addAll($statement.breakList);
+
+	$contList = $t.contList;
+	$contList.addAll($statement.contList);
 }
 |
 {
 	$nextList = new ArrayList<>();
+	$breakList = new ArrayList<>();
+	$contList = new ArrayList<>();
+
 	symTabStack.pop();
 }
 ;
 
 
-statement returns [List<Integer> nextList]
+statement returns [
+	List<Integer> nextList,
+	List<Integer> breakList,
+	List<Integer> contList
+]
 : location eqOp expr ';'
 {
 	$nextList = new ArrayList<>();
+	$breakList = new ArrayList<>();
+	$contList = new ArrayList<>();
 
 	int srcId = $expr.id;
 
@@ -640,6 +662,9 @@ statement returns [List<Integer> nextList]
 }
 | If '(' expr ')' m=marker block
 {
+	$breakList = new ArrayList<>();
+	$contList = new ArrayList<>();
+
 	q.backpatch($expr.trueList, $m.label);
 	
 	List<Integer> merged = new ArrayList<>();
@@ -649,6 +674,9 @@ statement returns [List<Integer> nextList]
 }
 | If '(' expr ')' m1=marker b1=block n=markerGoto Else m2=marker b2=block
 {
+	$breakList = new ArrayList<>();
+	$contList = new ArrayList<>();
+
 	q.backpatch($expr.trueList, $m1.label);
 	q.backpatch($expr.falseList, $m2.label);
 
@@ -662,6 +690,8 @@ statement returns [List<Integer> nextList]
 | For Ident '=' e1=expr ',' e2=expr forMarker block
 {
 	$nextList = new ArrayList<>();
+	$breakList = new ArrayList<>();
+	$contList = new ArrayList<>();
 
 	int iteratorId = symTabStack.Find($Ident.text);
 
@@ -683,33 +713,56 @@ statement returns [List<Integer> nextList]
 	int loopExitLabelId = st.insert(q.NextInstr() + "", DataType.INT);
 	q.Set($forMarker.label3, -1, $forMarker.tmpId, loopEnterLabelId, "if");
 	q.Set($forMarker.label4, -1, $forMarker.tmpId, loopExitLabelId, "ifFalse");
+
+	//backpatch continue and break list
+	q.backpatch($block.breakList, loopExitLabelId);
+	q.backpatch($block.contList, loopRedoLabelId);
 }
 | Ret ';'
 {
 	$nextList = new ArrayList<>();
+	$breakList = new ArrayList<>();
+	$contList = new ArrayList<>();
+
 	q.Add(-1, -1, -1, "ret");
 }
 | Ret '(' expr ')' ';'
 {
 	$nextList = new ArrayList<>();
+	$breakList = new ArrayList<>();
+	$contList = new ArrayList<>();
+
 	q.Add(-1, $expr.id, -1, "ret");
 }
 | Brk ';'
 {
 	$nextList = new ArrayList<>();
+	$breakList = new ArrayList<>();
+	$contList = new ArrayList<>();
+
+	$breakList.add(q.Add(-1, -1, -1, "goto"));
 }
 | Cnt ';'
 {
 	$nextList = new ArrayList<>();
+	$breakList = new ArrayList<>();
+	$contList = new ArrayList<>();
+
+	$contList.add(q.Add(-1, -1, -1, "goto"));
 }
 | block
 {
 	$nextList = $block.nextList;
+	$breakList = $block.breakList;
+	$contList = $block.contList;
 }
 | methodCall ';'
 {
 	$nextList = new ArrayList<>();
-	int argsCountId = st.insert(Integer.toString($methodCall.argsCount), DataType.INT);
+	$breakList = new ArrayList<>();
+	$contList = new ArrayList<>();
+
+	int argsCountId = symTabStack.getLast().insert(Integer.toString($methodCall.argsCount), DataType.INT);
 	q.Add(-1, $methodCall.id, argsCountId, "call");
 }
 ;
@@ -772,8 +825,6 @@ calloutArgs returns [int count]
 
 expr returns [
 	int id,
-	boolean isLiteral,
-	boolean isLocation,
 	List<Integer> trueList,
 	List<Integer> falseList
 ]
@@ -785,8 +836,6 @@ expr returns [
 		$trueList = new ArrayList<>();
 		$falseList = new ArrayList<>();
 	}
-
-	$isLiteral = true;
 }
 | location
 {
@@ -803,8 +852,6 @@ expr returns [
 	} else {
 		$id = $location.id;
 	}
-
-	$isLocation = true;
 }
 | '(' e=expr ')'
 {
@@ -870,8 +917,6 @@ expr returns [
 	$falseList = merged;
 
 	$trueList = $e2.trueList;
-
-	//literal operands
 }
 | e1=expr OrOp m=marker e2=expr
 {
