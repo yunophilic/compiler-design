@@ -1,0 +1,54 @@
+class Program {
+
+int a, c;
+int b = 0;
+int x = 1;
+
+int fun ( )
+{
+	return (a+b);	
+}
+
+int pop ( int a, int b, int c, boolean d )
+{
+	a = a %10 + a*10;
+	return (a);
+
+}
+
+
+int main () {
+
+	a = 10;
+
+	if ( a < 5 && a > 6)
+	{
+		pop( a, b, c);
+	}
+	else
+	{
+		b=10;
+        for x = a, b
+		{
+			c = c % x;
+			if (c == 3)
+			{
+				if (a == 3 || a != 10)
+				{
+					callout( "printf", "continue" );
+					continue;
+				}
+				else
+				{
+					{	
+						callout( "printf", "break" );
+						break;
+					}
+				}		
+			}
+		}
+	}
+	return (0);
+
+}
+}
