@@ -1,6 +1,7 @@
 package x86;
 
 	public class Quad {
+		static int offsetCtr = 16;
 
 		Symbol label;
 		String op;
@@ -136,24 +137,10 @@ package x86;
 				System.out.println("call " + src1.GetName());
 				System.out.println("mov %rax, -" + dst.GetOffset() + "(%rbp)");
 
-			} else if (op.equals("push %rdi")) {
-				System.out.println("mov %rdi, -16(%rbp)");
-
-			} else if (op.equals("push %rsi")) {
-				System.out.println("mov %rsi, -16(%rbp)");
-
-			} else if (op.equals("push %rdx")) {
-				System.out.println("mov %rdx, -16(%rbp)");
-
-			} else if (op.equals("push %rcx")) {
-				System.out.println("mov %rcx, -16(%rbp)");
-
-			} else if (op.equals("push %r8")) {
-				System.out.println("mov %r8, -16(%rbp)");
-
-			} else if (op.equals("push %r9")) {
-				System.out.println("mov %r9, -16(%rbp)");
-
+			} else if (op.startsWith("push")) {
+				String reg = op.split(" ")[1];
+				System.out.println("mov " + reg + ", -" + offsetCtr + "(%rbp)");
+				offsetCtr += 16;
 			}
 		}
 
