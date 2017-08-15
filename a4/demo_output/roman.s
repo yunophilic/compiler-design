@@ -179,15 +179,15 @@ L_6: mov %rdi, -16(%rbp)
 
 
 #L_7:  push %rsi 
-L_7: mov %rsi, -32(%rbp)
+L_7: mov %rsi, -48(%rbp)
 
 
 #L_8:  push %rdx 
-L_8: mov %rdx, -48(%rbp)
+L_8: mov %rdx, -80(%rbp)
 
 
 #L_9:  push %rcx 
-L_9: mov %rcx, -64(%rbp)
+L_9: mov %rcx, -112(%rbp)
 
 
 #L_10: t_1 = a * 10
@@ -256,7 +256,6 @@ mov %rax, a
 L_20: mov a, %rax
 mov $5, %rbx
 cmp %rax, %rbx
-mov %rax, -80(%rbp)
 
 
 #L_21: L_23 = t_6 jg 
@@ -271,7 +270,6 @@ L_22: jle L_31
 L_23: mov a, %rax
 mov $6, %rbx
 cmp %rax, %rbx
-mov %rax, -160(%rbp)
 
 
 #L_24: L_26 = t_7 jl 
@@ -316,7 +314,6 @@ mov %rax, x
 L_33: mov x, %rax
 mov b, %rbx
 cmp %rax, %rbx
-mov %rax, -368(%rbp)
 
 
 #L_34: L_57 = t_8 jle 
@@ -354,7 +351,6 @@ mov %rax, c
 L_39: mov c, %rax
 mov $3, %rbx
 cmp %rax, %rbx
-mov %rax, -544(%rbp)
 
 
 #L_40: L_42 = t_12 je 
@@ -369,7 +365,6 @@ L_41: jne L_55
 L_42: mov a, %rax
 mov $3, %rbx
 cmp %rax, %rbx
-mov %rax, -624(%rbp)
 
 
 #L_43: L_48 = t_13 je 
@@ -384,7 +379,6 @@ L_44: jne L_45
 L_45: mov a, %rax
 mov $10, %rbx
 cmp %rax, %rbx
-mov %rax, -704(%rbp)
 
 
 #L_46: L_48 = t_14 jne 
