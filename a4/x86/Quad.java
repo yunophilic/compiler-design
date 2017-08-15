@@ -1,7 +1,7 @@
 package x86;
 
 public class Quad {
-	static int offsetCtr = 16;
+	//static int offsetCtr = 16;
 
 	Symbol label;
 	String op;
@@ -139,8 +139,7 @@ public class Quad {
 
 		} else if (op.startsWith("push")) {
 			String reg = op.split(" ")[1];
-			System.out.println("mov " + reg + ", -" + offsetCtr + "(%rbp)");
-			offsetCtr += 16;
+			System.out.println("mov " + reg + ", -" + (label.GetOffset() - 16) + "(%rbp)");
 		}
 	}
 
